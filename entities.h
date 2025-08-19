@@ -3,6 +3,7 @@
 #include <SFML/System.hpp>
 #include <SFML/Audio.hpp>
 #include <vector>
+#include <memory>
 #include "common.h"
 #include "ai_definitions.h"
 
@@ -23,7 +24,7 @@ public:
     sf::Clock lastAttackClock;
 
     virtual ~Character() = default;
-    
+
     virtual bool takeDamage(int damage, SoundEngine& engine, Character* attacker = nullptr);
 };
 
@@ -41,6 +42,15 @@ public:
     bool isCrouching = false;
     WeaponType currentWeapon = WeaponType::FIST;
 
+    float currentStamina = 100.0f;
+    float maxStamina = 100.0f;
+    int stepsTakenSinceRest = 0;
+    bool isOutOfBreath = false;
+    sf::Clock staminaRegenDelayClock;
+    sf::Clock outOfBreathTimer;
+
+    int medkitCount = 0;
+
 private:
     float healthRegenBuffer = 0.0f;
     sf::Clock healthRegenDelayClock;
@@ -54,6 +64,7 @@ public:
     bool takeDamage(int damage, SoundEngine& engine, Character* attacker = nullptr) override;
     void toggleCrouch();
     bool isRegenOnCooldown(const GameSettings& settings) const;
+    bool useMedkit(const GameSettings& settings);
 };
 
 class NPC : public Character {
@@ -62,14 +73,14 @@ public:
     float runSpeed = 4.5f;
     static constexpr float WALK_STEP_INTERVAL = 0.6f;
     static constexpr float RUN_STEP_INTERVAL = 0.4f;
-    
+
     NPCType type;
     WeaponType weapon = WeaponType::FIST;
     AIBehavior behavior = AIBehavior::AGGRESSOR;
     AIState state = AIState::PATROLLING;
     float detectionLevel = 0.0f;
     bool hasReactedToDeath = false;
-    bool isStunned = false; // НОВОЕ: Флаг оглушения
+    bool isStunned = false;
 
 private:
     sf::Vector3f targetPosition;
@@ -77,7 +88,7 @@ private:
     sf::Clock stateTimer;
     sf::Clock stepClock;
     sf::Clock deathClock;
-    sf::Clock stunClock; // НОВОЕ: Таймер для отслеживания длительности оглушения
+    sf::Clock stunClock;
     bool isMoving = false;
     bool isWaiting = false;
 
@@ -86,11 +97,11 @@ private:
     bool hasLineOfSight(const sf::Vector3f& target, const std::vector<sf::FloatRect>& walls);
     void updatePatrolling(float deltaTime, SoundEngine& engine, const std::vector<sf::FloatRect>& walls);
     void updateAlert(float deltaTime, SoundEngine& engine, const std::vector<sf::FloatRect>& walls);
-    void updateCombat(float deltaTime, Player& player, SoundEngine& engine, const GameSettings& settings, const std::vector<std::unique_ptr<NPC>>& allNpcs);
+    void updateCombat(float deltaTime, Player& player, SoundEngine& engine, const GameSettings& settings, const std::vector<sf::FloatRect>& walls, const std::vector<std::unique_ptr<NPC>>& allNpcs);
 
 public:
     NPC(sf::Vector3f startPos, NPCType npcType, const GameSettings& settings);
-    void update(float deltaTime, Player& player, SoundEngine& engine, const GameSettings& settings, GameMode gameMode, const std::vector<sf::FloatRect>& walls, const std::vector<std::unique_ptr<NPC>>& allNpcs); 
+    void update(float deltaTime, Player& player, SoundEngine& engine, const GameSettings& settings, GameMode gameMode, const std::vector<sf::FloatRect>& walls, const std::vector<std::unique_ptr<NPC>>& allNpcs);
     bool canRespawn(float respawnTime) const;
     void respawn(sf::Vector3f newPosition, const GameSettings& settings);
     void onDeath(SoundEngine& engine);

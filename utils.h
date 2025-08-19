@@ -29,9 +29,9 @@ inline sf::Vector2f rayIntersectsRect(const sf::Vector2f& rayOrigin, const sf::V
     for (int i = 0; i < 2; ++i) {
         float origin_i = (i == 0) ? rayOrigin.x : rayOrigin.y;
         float dir_i = (i == 0) ? rayDir.x : rayDir.y;
-        
-        float rect_min_i = (i == 0) ? rect.position.x : rect.position.y;
-        float rect_max_i = (i == 0) ? rect.position.x + rect.size.x : rect.position.y + rect.size.y;
+
+        float rect_min_i = (i == 0) ? rect.left : rect.top;
+        float rect_max_i = (i == 0) ? rect.left + rect.width : rect.top + rect.height;
 
         if (std::abs(dir_i) < 1e-6) {
             if (origin_i < rect_min_i || origin_i > rect_max_i) return {-1, -1};

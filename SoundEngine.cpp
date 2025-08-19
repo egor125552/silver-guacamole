@@ -1,6 +1,7 @@
 #include "SoundEngine.h"
-#include "entities.h"      // Включаем полные определения для Player и NPC
-#include "ai_definitions.h" // Включаем для AIState
+#include "entities.h"
+#include "ai_definitions.h"
+#include "utils.h"
 
 #include <iostream>
 #include <fstream>
@@ -12,57 +13,54 @@
 #include <chrono>
 #include <ctime>
 #include <optional>
+#include <cstring>
 
 #ifdef _WIN32
 #include <windows.h>
 #endif
-
-// --- Глобальные функции ---
 
 void logError(const std::string& message) {
     std::ofstream log_file("error_log.txt", std::ios_base::app);
     auto now = std::chrono::system_clock::now();
     std::time_t time = std::chrono::system_clock::to_time_t(now);
     char time_str[26];
-    ctime_s(time_str, sizeof(time_str), &time);
-    time_str[strlen(time_str) - 1] = '\0';
+    strncpy(time_str, ctime(&time), sizeof(time_str));
+    time_str[sizeof(time_str) - 1] = '\0';
+    time_str[strcspn(time_str, "\n")] = '\0';
     log_file << "[" << time_str << "] " << message << std::endl;
 }
-
-// --- Реализация методов SoundEngine ---
 
 SoundEngine::SoundEngine()
     : window(sf::VideoMode({800, 600}), "Stealth Action - Coordinated Assault", sf::Style::Titlebar | sf::Style::Close),
       playerDeathSound(dummyBuffer), sonarSound(dummyBuffer),
-      lowHealthSound(dummyBuffer), detectionTickSound(dummyBuffer)
+      lowHealthSound(dummyBuffer), detectionTickSound(dummyBuffer), outOfBreathSound(dummyBuffer)
 {
     setupConsole();
     loadSettings();
     loadSounds();
     generateSounds();
-    
+
     player = std::make_unique<Player>(settings);
-    
+
     soundPool.reserve(SOUND_POOL_SIZE);
     for (size_t i = 0; i < SOUND_POOL_SIZE; ++i) {
         soundPool.emplace_back(dummyBuffer);
     }
-    
-    playerDeathSound.setBuffer(soundBuffers.at("player_death"));
+
+    if(soundBuffers.count("player_death")) playerDeathSound.setBuffer(soundBuffers.at("player_death"));
     playerDeathSound.setRelativeToListener(true);
-    sonarSound.setBuffer(soundBuffers.at("Sonar"));
-    lowHealthSound.setBuffer(soundBuffers.at("LowHealth"));
+    if(soundBuffers.count("Sonar")) sonarSound.setBuffer(soundBuffers.at("Sonar"));
+    if(soundBuffers.count("LowHealth")) lowHealthSound.setBuffer(soundBuffers.at("LowHealth"));
     lowHealthSound.setRelativeToListener(true);
-    lowHealthSound.setLooping(true);
+    lowHealthSound.setLoop(true);
     lowHealthSound.setVolume(80);
-    detectionTickSound.setBuffer(soundBuffers.at("DetectionTick"));
+    if(soundBuffers.count("DetectionTick")) detectionTickSound.setBuffer(soundBuffers.at("DetectionTick"));
     detectionTickSound.setRelativeToListener(true);
 
     weapons[WeaponType::FIST]      = {settings.fistDamage, 0.5f, "punch", false, settings.fistVolume};
     weapons[WeaponType::PISTOL]    = {settings.pistolDamage, 0.4f, "pistol", false, settings.pistolVolume};
 }
 
-// Определение деструктора здесь, где Player и NPC полностью определены
 SoundEngine::~SoundEngine() = default;
 
 void SoundEngine::loadSettings() {
@@ -85,6 +83,13 @@ void SoundEngine::loadSettings() {
                 else if (key == "HealthRegenRate") settings.healthRegenRate = std::stof(value);
                 else if (key == "HealthRegenDelay") settings.healthRegenDelay = std::stof(value);
                 else if (key == "LowHealthThreshold") settings.lowHealthThreshold = std::stoi(value);
+                else if (key == "PlayerMaxStamina") settings.playerMaxStamina = std::stof(value);
+                else if (key == "StaminaDrainRate") settings.staminaDrainRate = std::stof(value);
+                else if (key == "StaminaRegenRate") settings.staminaRegenRate = std::stof(value);
+                else if (key == "StaminaRegenDelay") settings.staminaRegenDelay = std::stof(value);
+                else if (key == "OutOfBreathStepThreshold") settings.outOfBreathStepThreshold = std::stoi(value);
+                else if (key == "MedkitCount") settings.medkitCount = std::stoi(value);
+                else if (key == "MedkitHealAmount") settings.medkitHealAmount = std::stoi(value);
                 else if (key == "RegularHealth") settings.regularHealth = std::stoi(value);
                 else if (key == "ShooterHealth") settings.shooterHealth = std::stoi(value);
                 else if (key == "MeleeNpcCanAttack") settings.meleeNpcCanAttack = (value == "yes");
@@ -106,27 +111,37 @@ void SoundEngine::loadSettings() {
 }
 
 void SoundEngine::loadSounds() {
-    const std::vector<std::string> soundNames = { "punch", "hit", "death", "miss", "player_death", "pistol", "Footstep" };
+    const std::vector<std::string> soundNames = { "punch", "hit", "death", "miss", "player_death", "pistol", "Footstep", "battle_cry", "reaction_panic" };
     for (const auto& name : soundNames) {
         std::string path = "sounds/" + name + ".ogg";
-        if (!soundBuffers[name].loadFromFile(path)) { throw std::runtime_error("Не удалось загрузить звук: " + path); }
+        if (!soundBuffers[name].loadFromFile(path)) {
+            logError("AUDIO_WARNING: Could not load sound: " + path);
+        }
     }
 }
 
 void SoundEngine::generateSounds() {
     std::vector<std::int16_t> samples;
     bool success;
-    samples.assign(44100 / 10, 0); for (size_t i = 0; i < samples.size(); ++i) { float t = static_cast<float>(i)/44100.0f; samples[i] = static_cast<std::int16_t>(15000.0f * sin(2*3.14159f*600.0f*t) * exp(-t*30.0f)); } success = soundBuffers["DetectionTick"].loadFromSamples(samples.data(), samples.size(), 1, 44100, {sf::SoundChannel::Mono}); if (!success) throw std::runtime_error("Не удалось сгенерировать DetectionTick");
-    samples.assign(44100 / 2, 0); for (size_t i = 0; i < samples.size(); ++i) { float t = static_cast<float>(i)/44100.0f; samples[i] = static_cast<std::int16_t>(32000.0f * sin(2*3.14159f*440.0f*t) * (1.0f-t*2.0f)); } success = soundBuffers["Spotted"].loadFromSamples(samples.data(), samples.size(), 1, 44100, {sf::SoundChannel::Mono}); if (!success) throw std::runtime_error("Не удалось сгенерировать Spotted");
-    samples.assign(44100, 0); for (size_t i = 0; i < samples.size(); ++i) { float t = static_cast<float>(i)/44100.0f; float pulse = (sin(2*3.14159f*2.0f*t)+1.0f)/2.0f; samples[i] = static_cast<std::int16_t>(20000.0f * sin(2*3.14159f*300.0f*t) * pulse); } success = soundBuffers["LowHealth"].loadFromSamples(samples.data(), samples.size(), 1, 44100, {sf::SoundChannel::Mono}); if (!success) throw std::runtime_error("Не удалось сгенерировать LowHealth");
-    samples.assign(44100/5, 0); for (size_t i=0; i < samples.size(); ++i) { float t = static_cast<float>(i)/44100.0f; samples[i] = static_cast<std::int16_t>(32000.0f * sin(2*3.14159f*900.0f*t) * exp(-t*20.0f)); } success = soundBuffers["Sonar"].loadFromSamples(samples.data(), samples.size(), 1, 44100, {sf::SoundChannel::Mono}); if (!success) throw std::runtime_error("Не удалось сгенерировать Sonar");
-    samples.assign(44100/30, 0);for (size_t i=0; i < samples.size(); ++i) { float t = static_cast<float>(i)/44100.0f; samples[i] = static_cast<std::int16_t>(18000.0f * sin(2*3.14159f*1200.0f*t) * exp(-t*80.0f)); } success = soundBuffers["sonar_echo"].loadFromSamples(samples.data(), samples.size(), 1, 44100, {sf::SoundChannel::Mono}); if (!success) throw std::runtime_error("Не удалось сгенерировать sonar_echo");
-    samples.assign(44100/20, 0); for (size_t i=0; i < samples.size(); ++i) { float t = static_cast<float>(i)/44100.0f; samples[i] = static_cast<std::int16_t>(25000.0f*sin(2*3.14159f*880.0f*t)*exp(-t*50.0f)); } success = soundBuffers["HealthIndicator"].loadFromSamples(samples.data(), samples.size(), 1, 44100, {sf::SoundChannel::Mono}); if (!success) throw std::runtime_error("Не удалось сгенерировать HealthIndicator");
-    samples.assign(44100/15, 0); for (size_t i=0; i < samples.size(); ++i) { float t = static_cast<float>(i)/44100.0f; samples[i] = static_cast<std::int16_t>(20000.0f*sin(2*3.14159f*600.0f*t)*exp(-t*40.0f)); } success = soundBuffers["MenuSelect"].loadFromSamples(samples.data(), samples.size(), 1, 44100, {sf::SoundChannel::Mono}); if(!success) throw std::runtime_error("Не удалось сгенерировать MenuSelect");
-    samples.assign(44100/10, 0); for (size_t i=0; i < samples.size(); ++i) { float t = static_cast<float>(i)/44100.0f; samples[i] = static_cast<std::int16_t>(22000.0f*sin(2*3.14159f*440.0f*t)*exp(-t*30.0f)); } success = soundBuffers["MenuConfirm"].loadFromSamples(samples.data(), samples.size(), 1, 44100, {sf::SoundChannel::Mono}); if(!success) throw std::runtime_error("Не удалось сгенерировать MenuConfirm");
-    
-    // НОВЫЙ ЗВУК: Оглушение (Stun)
-    samples.assign(44100/8, 0); for (size_t i=0; i < samples.size(); ++i) { float t = static_cast<float>(i)/44100.0f; float freq = 800.0f - sin(t * 3.14159f * 4.0f) * 400.0f; samples[i] = static_cast<std::int16_t>(28000.0f * sin(2*3.14159f*freq*t) * exp(-t*20.0f)); } success = soundBuffers["Stun"].loadFromSamples(samples.data(), samples.size(), 1, 44100, {sf::SoundChannel::Mono}); if(!success) throw std::runtime_error("Не удалось сгенерировать Stun");
+    samples.assign(44100 / 10, 0); for (size_t i = 0; i < samples.size(); ++i) { float t = static_cast<float>(i)/44100.0f; samples[i] = static_cast<std::int16_t>(15000.0f * sin(2*3.14159f*600.0f*t) * exp(-t*30.0f)); } success = soundBuffers["DetectionTick"].loadFromSamples(samples.data(), samples.size(), 1, 44100); if (!success) throw std::runtime_error("Failed to generate DetectionTick");
+    samples.assign(44100 / 2, 0); for (size_t i = 0; i < samples.size(); ++i) { float t = static_cast<float>(i)/44100.0f; samples[i] = static_cast<std::int16_t>(32000.0f * sin(2*3.14159f*440.0f*t) * (1.0f-t*2.0f)); } success = soundBuffers["Spotted"].loadFromSamples(samples.data(), samples.size(), 1, 44100); if (!success) throw std::runtime_error("Failed to generate Spotted");
+    samples.assign(44100, 0); for (size_t i = 0; i < samples.size(); ++i) { float t = static_cast<float>(i)/44100.0f; float pulse = (sin(2*3.14159f*2.0f*t)+1.0f)/2.0f; samples[i] = static_cast<std::int16_t>(20000.0f * sin(2*3.14159f*300.0f*t) * pulse); } success = soundBuffers["LowHealth"].loadFromSamples(samples.data(), samples.size(), 1, 44100); if (!success) throw std::runtime_error("Failed to generate LowHealth");
+    samples.assign(44100/5, 0); for (size_t i=0; i < samples.size(); ++i) { float t = static_cast<float>(i)/44100.0f; samples[i] = static_cast<std::int16_t>(32000.0f * sin(2*3.14159f*900.0f*t) * exp(-t*20.0f)); } success = soundBuffers["Sonar"].loadFromSamples(samples.data(), samples.size(), 1, 44100); if (!success) throw std::runtime_error("Failed to generate Sonar");
+    samples.assign(44100/30, 0);for (size_t i=0; i < samples.size(); ++i) { float t = static_cast<float>(i)/44100.0f; samples[i] = static_cast<std::int16_t>(18000.0f * sin(2*3.14159f*1200.0f*t) * exp(-t*80.0f)); } success = soundBuffers["sonar_echo"].loadFromSamples(samples.data(), samples.size(), 1, 44100); if (!success) throw std::runtime_error("Failed to generate sonar_echo");
+    samples.assign(44100/20, 0); for (size_t i=0; i < samples.size(); ++i) { float t = static_cast<float>(i)/44100.0f; samples[i] = static_cast<std::int16_t>(25000.0f*sin(2*3.14159f*880.0f*t)*exp(-t*50.0f)); } success = soundBuffers["HealthIndicator"].loadFromSamples(samples.data(), samples.size(), 1, 44100); if (!success) throw std::runtime_error("Failed to generate HealthIndicator");
+    samples.assign(44100/15, 0); for (size_t i=0; i < samples.size(); ++i) { float t = static_cast<float>(i)/44100.0f; samples[i] = static_cast<std::int16_t>(20000.0f*sin(2*3.14159f*600.0f*t)*exp(-t*40.0f)); } success = soundBuffers["MenuSelect"].loadFromSamples(samples.data(), samples.size(), 1, 44100); if(!success) throw std::runtime_error("Failed to generate MenuSelect");
+    samples.assign(44100/10, 0); for (size_t i=0; i < samples.size(); ++i) { float t = static_cast<float>(i)/44100.0f; samples[i] = static_cast<std::int16_t>(22000.0f*sin(2*3.14159f*440.0f*t)*exp(-t*30.0f)); } success = soundBuffers["MenuConfirm"].loadFromSamples(samples.data(), samples.size(), 1, 44100); if(!success) throw std::runtime_error("Failed to generate MenuConfirm");
+    samples.assign(44100/8, 0); for (size_t i=0; i < samples.size(); ++i) { float t = static_cast<float>(i)/44100.0f; float freq = 800.0f - sin(t * 3.14159f * 4.0f) * 400.0f; samples[i] = static_cast<std::int16_t>(28000.0f * sin(2*3.14159f*freq*t) * exp(-t*20.0f)); } success = soundBuffers["Stun"].loadFromSamples(samples.data(), samples.size(), 1, 44100); if(!success) throw std::runtime_error("Failed to generate Stun");
+
+    // Out of Breath sounds
+    samples.assign(44100 * 0.4f, 0); for(size_t i=0; i < samples.size(); ++i) { float t = static_cast<float>(i)/44100.0f; samples[i] = static_cast<std::int16_t>(getFloat(-1.0f, 1.0f) * 16000.0f * exp(-t*8.0f));} success = soundBuffers["OutOfBreath1"].loadFromSamples(samples.data(), samples.size(), 1, 44100); if(!success) throw std::runtime_error("Failed to generate OutOfBreath1");
+    samples.assign(44100 * 0.5f, 0); for(size_t i=0; i < samples.size(); ++i) { float t = static_cast<float>(i)/44100.0f; samples[i] = static_cast<std::int16_t>(getFloat(-1.0f, 1.0f) * 14000.0f * exp(-t*7.0f));} success = soundBuffers["OutOfBreath2"].loadFromSamples(samples.data(), samples.size(), 1, 44100); if(!success) throw std::runtime_error("Failed to generate OutOfBreath2");
+    samples.assign(44100 * 0.3f, 0); for(size_t i=0; i < samples.size(); ++i) { float t = static_cast<float>(i)/44100.0f; samples[i] = static_cast<std::int16_t>(getFloat(-1.0f, 1.0f) * 18000.0f * exp(-t*9.0f));} success = soundBuffers["OutOfBreath3"].loadFromSamples(samples.data(), samples.size(), 1, 44100); if(!success) throw std::runtime_error("Failed to generate OutOfBreath3");
+
+    // Medkit sounds
+    samples.assign(44100/12, 0); for(size_t i=0; i < samples.size(); ++i) { float t = static_cast<float>(i)/44100.0f; samples[i] = static_cast<std::int16_t>(25000.0f*sin(2*3.14159f*1200.0f*t)*exp(-t*40.0f));} success = soundBuffers["MedkitPickup"].loadFromSamples(samples.data(), samples.size(), 1, 44100); if(!success) throw std::runtime_error("Failed to generate MedkitPickup");
+    samples.assign(44100/2, 0); for(size_t i=0; i < samples.size(); ++i) { float t = static_cast<float>(i)/44100.0f; float freq = 440.0f + 220.0f * t; samples[i] = static_cast<std::int16_t>(20000.0f*sin(2*3.14159f*freq*t) * (1.0f - t*2.0f));} success = soundBuffers["MedkitUse"].loadFromSamples(samples.data(), samples.size(), 1, 44100); if(!success) throw std::runtime_error("Failed to generate MedkitUse");
+    samples.assign(44100/8, 0); for(size_t i=0; i < samples.size(); ++i) { float t = static_cast<float>(i)/44100.0f; samples[i] = static_cast<std::int16_t>(25000.0f*sin(2*3.14159f*220.0f*t)*exp(-t*20.0f));} success = soundBuffers["MedkitFail"].loadFromSamples(samples.data(), samples.size(), 1, 44100); if(!success) throw std::runtime_error("Failed to generate MedkitFail");
 }
 
 void SoundEngine::run() {
@@ -137,16 +152,9 @@ void SoundEngine::run() {
         if (deltaTime > 0.1f) deltaTime = 0.1f;
         processEvents();
         if (gameState == GameState::Playing) {
-            bool isMoving = processInput(deltaTime);
+            processInput(deltaTime);
             player->update(deltaTime, settings);
             update(deltaTime);
-            static sf::Clock stepClock;
-            float stepInterval = player->isCrouching ? Player::CROUCH_STEP_INTERVAL : (player->isRunning ? Player::RUN_STEP_INTERVAL : Player::WALK_STEP_INTERVAL);
-            if (isMoving && stepClock.getElapsedTime().asSeconds() > stepInterval) {
-                float volume = player->isCrouching ? 40.f : (player->isRunning ? 100.f : 80.f);
-                playSound("Footstep", {0,0,0}, volume, true);
-                stepClock.restart();
-            }
         } else if (gameState == GameState::PlayerDying) {
             if (playerDeathSound.getStatus() != sf::Sound::Status::Playing) {
                 gameState = GameState::GameOver;
@@ -158,17 +166,21 @@ void SoundEngine::run() {
 }
 
 void SoundEngine::selectGameMode() {
-    int menuState = 0, modeSelection = 0; 
-    playSound("MenuSelect", {0,0,0}, 100.f, true, 1.0f); 
+    int menuState = 0, modeSelection = 0;
+    playSound("MenuSelect", {0,0,0}, 100.f, true, 1.0f);
+    sf::Event event;
     while(window.isOpen() && menuState < 1) {
-        while (const auto event = window.pollEvent()) {
-            if (event->is<sf::Event::Closed>()) { window.close(); return; }
-            if (const auto* keyPressed = event->getIf<sf::Event::KeyPressed>()) {
-                if (keyPressed->code == sf::Keyboard::Key::Up || keyPressed->code == sf::Keyboard::Key::Down) {
+        while (window.pollEvent(event)) {
+            if (event.type == sf::Event::Closed) {
+                window.close();
+                return;
+            }
+            if (event.type == sf::Event::KeyPressed) {
+                if (event.key.code == sf::Keyboard::Up || event.key.code == sf::Keyboard::Down) {
                     modeSelection = 1 - modeSelection;
-                    float pitch = (modeSelection == 0) ? 1.0f : 1.2f; 
+                    float pitch = (modeSelection == 0) ? 1.0f : 1.2f;
                     playSound("MenuSelect", {0,0,0}, 100.f, true, pitch);
-                } else if (keyPressed->code == sf::Keyboard::Key::Enter) {
+                } else if (event.key.code == sf::Keyboard::Enter) {
                     gameMode = (modeSelection == 0) ? GameMode::CLASSIC_ACTION : GameMode::STEALTH_MODE;
                     playSound("MenuConfirm", {0,0,0}, 100.f, true, 1.5f);
                     menuState = 1;
@@ -213,7 +225,7 @@ void SoundEngine::activateDirectionalSonar(int numpadKey) {
             }
         }
     }
-    
+
     if (closestIntersection.x != -1) {
          float dist = std::sqrt(min_dist_sq);
          if (dist < 60.0f) {
@@ -244,11 +256,14 @@ bool SoundEngine::hasLineOfSightTo(const sf::Vector3f& target) {
 }
 
 void SoundEngine::processEvents() {
-    while (const auto event = window.pollEvent()) {
-        if (event->is<sf::Event::Closed>()) { window.close(); }
-        if (const auto* keyPressed = event->getIf<sf::Event::KeyPressed>()) {
+    sf::Event event;
+    while (window.pollEvent(event)) {
+        if (event.type == sf::Event::Closed) {
+            window.close();
+        }
+        if (event.type == sf::Event::KeyPressed) {
             if (gameState == GameState::Playing) {
-                switch (keyPressed->scancode) {
+                switch (event.key.scancode) {
                     case sf::Keyboard::Scan::Numpad8: activateDirectionalSonar(8); break;
                     case sf::Keyboard::Scan::Numpad9: activateDirectionalSonar(9); break;
                     case sf::Keyboard::Scan::Numpad6: activateDirectionalSonar(6); break;
@@ -260,67 +275,104 @@ void SoundEngine::processEvents() {
                     default: break;
                 }
 
-                 switch (keyPressed->code) {
-                    case sf::Keyboard::Key::Escape: window.close(); break;
-                    case sf::Keyboard::Key::LControl: player->toggleCrouch(); break;
-                    case sf::Keyboard::Key::Num1: player->switchWeapon(WeaponType::FIST); break;
-                    case sf::Keyboard::Key::Num2: player->switchWeapon(WeaponType::PISTOL); break;
-                    case sf::Keyboard::Key::Space: handlePlayerAttack(); break;
-                    case sf::Keyboard::Key::E: activateSonar(); break;
-                    case sf::Keyboard::Key::G: player->godMode = !player->godMode; playSound("punch", {0,0,0}, 100.f, true); break;
+                 switch (event.key.code) {
+                    case sf::Keyboard::Escape: window.close(); break;
+                    case sf::Keyboard::LControl: player->toggleCrouch(); break;
+                    case sf::Keyboard::Num1: player->switchWeapon(WeaponType::FIST); break;
+                    case sf::Keyboard::Num2: player->switchWeapon(WeaponType::PISTOL); break;
+                    case sf::Keyboard::Space: handlePlayerAttack(); break;
+                    case sf::Keyboard::E: activateSonar(); break;
+                    case sf::Keyboard::H:
+                        if (player->useMedkit(settings)) {
+                            playSound("MedkitUse", {0,0,0}, 100.f, true);
+                        } else {
+                            playSound("MedkitFail", {0,0,0}, 100.f, true);
+                        }
+                        break;
+                    case sf::Keyboard::G: player->godMode = !player->godMode; playSound("punch", {0,0,0}, 100.f, true); break;
                     default: break;
                 }
-            } else if (gameState == GameState::GameOver && keyPressed->code == sf::Keyboard::Key::R) {
+            } else if (gameState == GameState::GameOver && event.key.code == sf::Keyboard::R) {
                  gameState = GameState::SelectingMode;
             }
         }
     }
 }
 
-bool SoundEngine::processInput(float deltaTime) {
-    if (!player->isAlive) return false;
-    player->isRunning = sf::Keyboard::isKeyPressed(sf::Keyboard::Scan::LShift) || sf::Keyboard::isKeyPressed(sf::Keyboard::Scan::RShift);
+void SoundEngine::processInput(float deltaTime) {
+    if (!player->isAlive) return;
+
+    bool wantsToRun = sf::Keyboard::isKeyPressed(sf::Keyboard::Scan::LShift) || sf::Keyboard::isKeyPressed(sf::Keyboard::Scan::RShift);
+    player->isRunning = wantsToRun && player->currentStamina > 0 && !player->isOutOfBreath;
     if (player->isCrouching) player->isRunning = false;
+
     float speed = player->isCrouching ? Player::CROUCH_SPEED : (player->isRunning ? player->runSpeed : Player::WALK_SPEED);
-    
+
     sf::Vector3f moveDir = {0,0,0};
     bool isMoving = false;
     if (sf::Keyboard::isKeyPressed(sf::Keyboard::Scan::Up))    { moveDir.z -= 1; isMoving = true; }
     if (sf::Keyboard::isKeyPressed(sf::Keyboard::Scan::Down))  { moveDir.z += 1; isMoving = true; }
     if (sf::Keyboard::isKeyPressed(sf::Keyboard::Scan::Left))  { moveDir.x -= 1; isMoving = true; }
     if (sf::Keyboard::isKeyPressed(sf::Keyboard::Scan::Right)) { moveDir.x += 1; isMoving = true; }
-    
+
     if (isMoving) {
         float len = std::hypot(moveDir.x, moveDir.z);
         if (len > 0) moveDir /= len;
         sf::Vector3f newPos = player->position + moveDir * speed * deltaTime;
         sf::FloatRect playerBounds({newPos.x - 0.4f, newPos.z - 0.4f}, {0.8f, 0.8f});
-        if (!std::any_of(walls.begin(), walls.end(), [&](const auto& wall){ return wall.findIntersection(playerBounds).has_value(); })) {
+        if (!std::any_of(walls.begin(), walls.end(), [&](const auto& wall){ return wall.intersects(playerBounds); })) {
             player->setPosition(newPos);
         } else {
             sf::Vector3f oldPos = player->position;
             player->setPosition({newPos.x, oldPos.y, oldPos.z});
-            playerBounds.position = {newPos.x - 0.4f, oldPos.z - 0.4f};
-            if (std::any_of(walls.begin(), walls.end(), [&](const auto& wall){ return wall.findIntersection(playerBounds).has_value(); })) {
+            playerBounds.left = newPos.x - 0.4f; playerBounds.top = oldPos.z - 0.4f;
+            if (std::any_of(walls.begin(), walls.end(), [&](const auto& wall){ return wall.intersects(playerBounds); })) {
                 player->setPosition(oldPos);
             }
             oldPos = player->position;
             player->setPosition({oldPos.x, oldPos.y, newPos.z});
-            playerBounds.position = {oldPos.x - 0.4f, newPos.z - 0.4f};
-            if (std::any_of(walls.begin(), walls.end(), [&](const auto& wall){ return wall.findIntersection(playerBounds).has_value(); })) {
+            playerBounds.left = oldPos.x - 0.4f; playerBounds.top = newPos.z - 0.4f;
+            if (std::any_of(walls.begin(), walls.end(), [&](const auto& wall){ return wall.intersects(playerBounds); })) {
                 player->setPosition(oldPos);
             }
         }
+
+        static sf::Clock stepClock;
+        float stepInterval = player->isCrouching ? Player::CROUCH_STEP_INTERVAL : (player->isRunning ? Player::RUN_STEP_INTERVAL : Player::WALK_STEP_INTERVAL);
+        if (stepClock.getElapsedTime().asSeconds() > stepInterval) {
+            float volume = player->isCrouching ? 40.f : (player->isRunning ? 100.f : 80.f);
+            playSound("Footstep", {0,0,0}, volume, true);
+            stepClock.restart();
+
+            if (!player->isCrouching) {
+                player->stepsTakenSinceRest++;
+                if (player->stepsTakenSinceRest > settings.outOfBreathStepThreshold) {
+                    player->isOutOfBreath = true;
+                    player->outOfBreathTimer.restart();
+                }
+            }
+        }
+    } else {
+        player->stepsTakenSinceRest = 0;
     }
-    return isMoving;
 }
 
 void SoundEngine::update(float deltaTime) {
-    handleNpcActions(deltaTime); 
+    handleNpcActions(deltaTime);
     updateLowHealthSound();
+    updateStaminaSounds();
+    updateMedkits(deltaTime);
     if (gameMode == GameMode::CLASSIC_ACTION) { updateProximitySonar(); }
     if (!player->isAlive && gameState == GameState::Playing) {
         gameState = GameState::PlayerDying; playerDeathSound.play();
+    }
+}
+
+void SoundEngine::updateStaminaSounds() {
+    if (player->isOutOfBreath && outOfBreathSoundClock.getElapsedTime().asSeconds() > getFloat(1.0f, 1.5f)) {
+        std::string soundName = "OutOfBreath" + std::to_string(getInt(1, 3));
+        playSound(soundName, {0,0,0}, 100.f, true);
+        outOfBreathSoundClock.restart();
     }
 }
 
@@ -333,8 +385,8 @@ void SoundEngine::generateLevel() {
         float z = getFloat(-settings.worldSize + h, settings.worldSize - h);
         sf::FloatRect newWall({x, z}, {w, h});
         sf::FloatRect playerStartArea({-2.f, -2.f}, {4.f, 4.f});
-        if (newWall.findIntersection(playerStartArea).has_value()) {
-            i--; 
+        if (newWall.intersects(playerStartArea)) {
+            i--;
             continue;
         }
         walls.push_back(newWall);
@@ -342,21 +394,22 @@ void SoundEngine::generateLevel() {
 }
 
 void SoundEngine::resetGame() {
-    gameState = GameState::Playing; 
-    player->reset(settings); 
+    gameState = GameState::Playing;
+    player->reset(settings);
     generateLevel();
-    sf::Listener::setDirection({0.f, 0.f, -1.f}); 
+    spawnMedkits();
+    sf::Listener::setDirection({0.f, 0.f, -1.f});
     npcs.clear();
     for (int i=0; i < INITIAL_NPC_COUNT; ++i) {
         npcs.push_back(std::make_unique<NPC>(sf::Vector3f(), NPCType::REGULAR, settings));
     }
     for (auto& npc : npcs) {
         sf::Vector3f pos;
-        do { pos = {getFloat(-settings.worldSize, settings.worldSize), 0, getFloat(-settings.worldSize, settings.worldSize)}; } 
+        do { pos = {getFloat(-settings.worldSize, settings.worldSize), 0, getFloat(-settings.worldSize, settings.worldSize)}; }
         while (std::hypot(pos.x, pos.z) < 20.0f);
         npc->respawn(pos, settings);
     }
-    gameClock.restart(); 
+    gameClock.restart();
     window.requestFocus();
 }
 
@@ -381,13 +434,13 @@ void SoundEngine::handleNpcActions(float deltaTime) {
             npc_to_update->update(deltaTime, *player, *this, settings, currentMode, walls, npcs);
         }
     }
-    for (auto& npc : npcs) { 
-        if (npc->canRespawn(settings.respawnTime)) { 
-            sf::Vector3f newPos; 
-            do { newPos.x = getFloat(-settings.worldSize, settings.worldSize); newPos.z = getFloat(-settings.worldSize, settings.worldSize); } 
-            while (std::hypot(newPos.x - player->position.x, newPos.z - player->position.z) < 25.0f); 
-            npc->respawn(newPos, settings); 
-        } 
+    for (auto& npc : npcs) {
+        if (npc->canRespawn(settings.respawnTime)) {
+            sf::Vector3f newPos;
+            do { newPos.x = getFloat(-settings.worldSize, settings.worldSize); newPos.z = getFloat(-settings.worldSize, settings.worldSize); }
+            while (std::hypot(newPos.x - player->position.x, newPos.z - player->position.z) < 25.0f);
+            npc->respawn(newPos, settings);
+        }
     }
 }
 
@@ -397,7 +450,7 @@ void SoundEngine::handlePlayerAttack() {
     if (player->lastAttackClock.getElapsedTime().asSeconds() < weapon.cooldown) return;
     player->lastAttackClock.restart();
     playSound(weapon.soundName, {0,0,0}, weapon.volume, true);
-    
+
     NPC* bestTarget = nullptr;
     float minDistance = std::numeric_limits<float>::max();
 
@@ -444,7 +497,7 @@ void SoundEngine::activateSonar() {
                 }
             }
         }
-        
+
         if (closestIntersection.x != -1) {
              float dist = std::sqrt(min_dist_sq);
              if (dist < 40.0f) {
@@ -523,4 +576,45 @@ void SoundEngine::setupConsole() {
     std::ios_base::sync_with_stdio(false);
     std::cin.tie(NULL);
     std::cout.tie(NULL);
+}
+
+void SoundEngine::spawnMedkits() {
+    medkits.clear();
+    for (int i = 0; i < settings.medkitCount; ++i) {
+        Medkit newMedkit;
+        bool positionIsSafe;
+        do {
+            positionIsSafe = true;
+            newMedkit.position = {getFloat(-settings.worldSize, settings.worldSize), 0, getFloat(-settings.worldSize, settings.worldSize)};
+
+            sf::FloatRect medkitBounds(newMedkit.position.x - 0.5f, newMedkit.position.z - 0.5f, 1.f, 1.f);
+            for (const auto& wall : walls) {
+                if (wall.intersects(medkitBounds)) {
+                    positionIsSafe = false;
+                    break;
+                }
+            }
+            if (!positionIsSafe) continue;
+
+            sf::FloatRect playerStartArea({-5.f, -5.f}, {10.f, 10.f});
+            if (playerStartArea.contains(newMedkit.position.x, newMedkit.position.z)) {
+                positionIsSafe = false;
+            }
+
+        } while (!positionIsSafe);
+        medkits.push_back(newMedkit);
+    }
+}
+
+void SoundEngine::updateMedkits(float deltaTime) {
+    for (auto& medkit : medkits) {
+        if (!medkit.isCollected) {
+            float dist = std::hypot(player->position.x - medkit.position.x, player->position.z - medkit.position.z);
+            if (dist < 1.5f) {
+                medkit.isCollected = true;
+                player->medkitCount++;
+                playSound("MedkitPickup", {0,0,0}, 100.f, true);
+            }
+        }
+    }
 }
