@@ -1,3 +1,4 @@
+// Core game engine implementation
 #include "SoundEngine.h"
 #include "entities.h"
 #include "utils.h"
