@@ -42,6 +42,10 @@ public:
     bool isCrouching = false;
     WeaponType currentWeapon = WeaponType::FIST;
 
+    // Stamina
+    float maxStamina;
+    float currentStamina;
+
 private:
     float healthRegenBuffer = 0.0f;
     sf::Clock healthRegenDelayClock;

@@ -7,15 +7,15 @@
 #include <memory>
 #include <map>
 #include <chrono>
+#include <functional> // For std::function
 
 #include "common.h"
 #include "utils.h"
 
-// Предварительные объявления, чтобы избежать циклических зависимостей
+// Forward declarations
 class NPC;
 class Player;
 
-// Перечисление для состояний игры
 enum class GameState {
     SelectingMode,
     Playing,
@@ -23,7 +23,6 @@ enum class GameState {
     GameOver
 };
 
-// Структура для оружия вынесена сюда для чистоты
 struct Weapon {
     int playerDamage;
     float cooldown;
@@ -32,15 +31,13 @@ struct Weapon {
     float volume;
 };
 
-// Основной класс игрового движка
 class SoundEngine {
 public:
     SoundEngine();
-    ~SoundEngine(); // Объявляем деструктор для исправления ошибки компиляции
+    ~SoundEngine();
 
     void run();
     
-    // Публичные методы для взаимодействия с движком
     void playSound(const std::string& name, sf::Vector3f position, float volume = 100.f, bool isListenerRelative = false, float pitch = -1.f);
     void onNpcSpottedPlayer(NPC* spottedBy, bool forceCombat = false);
     void onNpcDied(NPC* deadNpc);
@@ -49,7 +46,7 @@ public:
     const GameSettings& getSettings() const { return settings; }
 
 private:
-    // --- Основные компоненты ---
+    // --- Core Components ---
     sf::RenderWindow window;
     GameState gameState = GameState::SelectingMode;
     GameMode gameMode = GameMode::CLASSIC_ACTION;
@@ -57,56 +54,59 @@ private:
     sf::Clock deltaClock;
     sf::Clock gameClock;
 
-    // --- Игровые сущности ---
+    // --- Game Entities ---
     std::unique_ptr<Player> player;
     std::vector<std::unique_ptr<NPC>> npcs;
     std::vector<sf::FloatRect> walls;
     static constexpr int INITIAL_NPC_COUNT = 5;
 
-    // --- Оружие ---
+    // --- Weapons ---
     std::map<WeaponType, Weapon> weapons;
 
-    // --- Звуковая система ---
+    // --- Sound System ---
     static constexpr size_t SOUND_POOL_SIZE = 64;
     std::map<std::string, sf::SoundBuffer> soundBuffers;
     std::vector<sf::Sound> soundPool;
     size_t currentSoundIndex = 0;
-    sf::SoundBuffer dummyBuffer; // Для инициализации
+    sf::SoundBuffer dummyBuffer;
 
-    // Специализированные звуки
+    // --- Specialized Sounds ---
     sf::Sound playerDeathSound;
     sf::Sound sonarSound;
     sf::Sound lowHealthSound;
     sf::Sound detectionTickSound;
-    
-    // Таймеры для механик
+    sf::Sound breathingSound; // For stamina
+    sf::Sound staminaCriticalSound; // For stamina
+
+    // --- Timers ---
     sf::Clock sonarClock;
     sf::Clock proximitySonarClock;
 
-    // --- Инициализация ---
+    // --- Initialization ---
     void setupConsole();
     void loadSettings();
     void loadSounds();
-    void generateSounds();
+    void loadSoundWithGeneration(const std::string& name, const std::string& path, std::function<sf::SoundBuffer()> generator);
 
-    // --- Основной игровой цикл ---
+    // --- Main Game Loop ---
     void processEvents();
     bool processInput(float deltaTime);
     void update(float deltaTime);
     
-    // --- Управление состоянием игры ---
+    // --- Game State Management ---
     void resetGame();
     void selectGameMode();
     void generateLevel();
 
-    // --- Игровые механики ---
+    // --- Game Mechanics ---
     void handleNpcActions(float deltaTime);
     void handlePlayerAttack();
     void activateSonar();
     void activateDirectionalSonar(int numpadKey);
     void updateProximitySonar();
     void updateLowHealthSound();
+    void updateStaminaSounds(); // New for stamina audio feedback
 };
 
-// Глобальная функция для логирования, т.к. она используется и в main
+// Global function for logging
 void logError(const std::string& message);

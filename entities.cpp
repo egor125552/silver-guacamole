@@ -16,6 +16,19 @@ bool Character::takeDamage(int damage, SoundEngine& engine, Character* attacker)
 Player::Player(const GameSettings& settings) { reset(settings); }
 void Player::update(float deltaTime, const GameSettings& settings) {
     if (!isAlive) return;
+
+    // Stamina logic
+    if (isRunning) {
+        currentStamina -= settings.staminaDrainRate * deltaTime;
+        if (currentStamina < 0) currentStamina = 0;
+    } else {
+        if (currentStamina < maxStamina) {
+            currentStamina += settings.staminaRegenRate * deltaTime;
+            if (currentStamina > maxStamina) currentStamina = maxStamina;
+        }
+    }
+
+    // Health regen logic
     if (health < maxHealth && healthRegenDelayClock.getElapsedTime().asSeconds() > settings.healthRegenDelay) {
         healthRegenBuffer += settings.healthRegenRate * deltaTime;
         if (healthRegenBuffer >= 1.0f) {
@@ -41,6 +54,7 @@ bool Player::takeDamage(int damage, SoundEngine& engine, Character* attacker) {
 void Player::reset(const GameSettings& settings) {
     isAlive = true; godMode = false; isRunning = false; isCrouching = false;
     maxHealth = settings.playerHealth; health = settings.playerHealth; healthRegenBuffer = 0.0f;
+    maxStamina = settings.playerMaxStamina; currentStamina = maxStamina;
     position = {0.f, 0.f, 0.f}; setPosition(position); runSpeed = settings.playerRunSpeed;
     currentWeapon = WeaponType::FIST;
     lastAttackClock.restart(); lastDamageTakenClock.restart(); healthRegenDelayClock.restart();
