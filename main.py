@@ -22,10 +22,7 @@ class MainWindow(QMainWindow):
         exit_action.triggered.connect(self.close)
         file_menu.addAction(exit_action)
 
-        view_menu = menu_bar.addMenu("Вид")
-        self.mixed_fraction_action = QAction("Автоматически преобразовывать в смешанные дроби", self, checkable=True)
-        self.mixed_fraction_action.setChecked(True)
-        view_menu.addAction(self.mixed_fraction_action)
+        # The "View" menu was removed as the fraction display is now automatic.
 
         help_menu = menu_bar.addMenu("Справка")
 
@@ -48,11 +45,7 @@ class MainWindow(QMainWindow):
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, history_dock)
 
         # --- Connect Signals ---
-        self.mixed_fraction_action.toggled.connect(self.on_mixed_fraction_toggled)
         self.calculator_widget.calculation_performed.connect(self.add_to_history)
-
-    def on_mixed_fraction_toggled(self, checked):
-        self.calculator_widget.convert_to_mixed = checked
 
     def add_to_history(self, expression, result):
         self.history_list.addItem(f"{expression} = {result}")

@@ -12,7 +12,6 @@ class CalculatorWidget(QWidget):
     def __init__(self):
         super().__init__()
         self.fractions_mode_active = False
-        self.convert_to_mixed = True
 
         self.layout = QVBoxLayout(self)
         self.display = QLineEdit()
@@ -67,26 +66,35 @@ class CalculatorWidget(QWidget):
 
     def evaluate_expression(self):
         try:
-            expression = self.display.text()
+            original_expression = self.display.text()
+            expression_to_eval = original_expression
+
+            # Smart output detection
+            # Default to simple output, only use mixed if input contained a mixed fraction
+            should_convert_to_mixed = False
 
             # Pre-process fractions if in fractions mode
             if self.fractions_mode_active:
+                # Check if the input contains a mixed fraction
+                if re.search(r'(\d+),\s*(\d+)\s+(\d+)', expression_to_eval):
+                    should_convert_to_mixed = True
+
                 # Handle mixed fraction format e.g., "1, 2 3" -> "(Fraction(1,1)+Fraction(2,3))"
-                expression = re.sub(r'(\d+),\s*(\d+)\s+(\d+)', r'(Fraction(\1, 1) + Fraction(\2, \3))', expression)
+                expression_to_eval = re.sub(r'(\d+),\s*(\d+)\s+(\d+)', r'(Fraction(\1, 1) + Fraction(\2, \3))', expression_to_eval)
                 # Handle space-separated format e.g., "2 3" -> "Fraction(2, 3)"
-                expression = re.sub(r'(\d+)\s+(\d+)', r'Fraction(\1, \2)', expression)
+                expression_to_eval = re.sub(r'(\d+)\s+(\d+)', r'Fraction(\1, \2)', expression_to_eval)
                 # Handle slash-separated format e.g., "2/3" -> "Fraction(2, 3)"
-                expression = re.sub(r'(\d+)/(\d+)', r'Fraction(\1, \2)', expression)
+                expression_to_eval = re.sub(r'(\d+)/(\d+)', r'Fraction(\1, \2)', expression_to_eval)
 
             # NOTE: eval is not safe!
-            result = eval(expression, {"Fraction": Fraction})
+            result = eval(expression_to_eval, {"Fraction": Fraction})
 
             if self.fractions_mode_active:
-                display_text = convert_fraction_to_words(result, convert_to_mixed=self.convert_to_mixed)
+                display_text = convert_fraction_to_words(result, convert_to_mixed=should_convert_to_mixed)
             else:
                 display_text = str(result)
 
-            self.calculation_performed.emit(expression, display_text)
+            self.calculation_performed.emit(original_expression, display_text)
             self.display.setText(display_text)
         except Exception as e:
             self.display.setText("Ошибка")
