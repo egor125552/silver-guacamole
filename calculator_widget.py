@@ -2,6 +2,9 @@ import sys
 from functools import partial
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QGridLayout, QLineEdit, QPushButton, QMessageBox
 from PyQt6.QtCore import Qt, pyqtSignal
+import re
+from fractions import Fraction
+from fraction_to_text import convert_fraction_to_words
 
 class CalculatorWidget(QWidget):
     calculation_performed = pyqtSignal(str, str)
@@ -67,21 +70,18 @@ class CalculatorWidget(QWidget):
 
             # Pre-process fractions if in fractions mode
             if self.fractions_mode_active:
-                # A simple regex to find number pairs and replace them
-                # This is a basic implementation.
-                import re
-                expression = re.sub(r'(\d+)\s+(\d+)', r'((\1)/(\2))', expression)
-
-            # Basic security check
-            safe_chars = "0123456789.+-*/() "
-            if not all(char in safe_chars for char in expression):
-                raise ValueError("Invalid characters in expression")
+                expression = re.sub(r'(\d+)\s+(\d+)', r'Fraction(\1, \2)', expression)
 
             # NOTE: eval is not safe!
-            result = eval(expression)
+            result = eval(expression, {"Fraction": Fraction})
 
-            self.calculation_performed.emit(expression, str(result))
-            self.display.setText(str(result))
+            if self.fractions_mode_active:
+                display_text = convert_fraction_to_words(result)
+            else:
+                display_text = str(result)
+
+            self.calculation_performed.emit(expression, display_text)
+            self.display.setText(display_text)
         except Exception as e:
             self.display.setText("Ошибка")
 
