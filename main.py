@@ -1,4 +1,6 @@
 import sys
+import os
+import webbrowser
 from PyQt6.QtWidgets import QApplication, QMainWindow, QMessageBox, QDockWidget, QListWidget
 from PyQt6.QtGui import QAction
 from PyQt6.QtCore import Qt
@@ -21,6 +23,11 @@ class MainWindow(QMainWindow):
         file_menu.addAction(exit_action)
 
         help_menu = menu_bar.addMenu("Справка")
+
+        guide_action = QAction("Руководство пользователя", self)
+        guide_action.triggered.connect(self.show_user_manual)
+        help_menu.addAction(guide_action)
+
         about_action = QAction("О программе", self)
         about_action.triggered.connect(self.show_about_dialog)
         help_menu.addAction(about_action)
@@ -41,6 +48,14 @@ class MainWindow(QMainWindow):
     def add_to_history(self, expression, result):
         self.history_list.addItem(f"{expression} = {result}")
         self.history_list.scrollToBottom()
+
+    def show_user_manual(self):
+        # Path to the manual file, assuming it's in the same directory
+        manual_path = os.path.join(os.path.dirname(__file__), 'manual.html')
+        if os.path.exists(manual_path):
+            webbrowser.open(f'file://{os.path.realpath(manual_path)}')
+        else:
+            QMessageBox.warning(self, "Ошибка", "Файл руководства (manual.html) не найден.")
 
     def show_about_dialog(self):
         QMessageBox.about(
