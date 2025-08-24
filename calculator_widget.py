@@ -71,6 +71,8 @@ class CalculatorWidget(QWidget):
 
             # Pre-process fractions if in fractions mode
             if self.fractions_mode_active:
+                # Handle mixed fraction format e.g., "1, 2 3" -> "(Fraction(1,1)+Fraction(2,3))"
+                expression = re.sub(r'(\d+),\s*(\d+)\s+(\d+)', r'(Fraction(\1, 1) + Fraction(\2, \3))', expression)
                 # Handle space-separated format e.g., "2 3" -> "Fraction(2, 3)"
                 expression = re.sub(r'(\d+)\s+(\d+)', r'Fraction(\1, \2)', expression)
                 # Handle slash-separated format e.g., "2/3" -> "Fraction(2, 3)"
