@@ -12,7 +12,7 @@ def _get_noun_plural_form(number, one, two, five):
         return two
     return five
 
-def convert_fraction_to_words(frac):
+def convert_fraction_to_words(frac, convert_to_mixed=True):
     """
     Converts a fractions.Fraction object to a Russian text representation
     using a simpler "X out of Y" format for the fractional part.
@@ -31,8 +31,8 @@ def convert_fraction_to_words(frac):
     numerator = frac.numerator
     denominator = frac.denominator
 
-    # Handle mixed fractions
-    if numerator >= denominator:
+    # Handle mixed fractions if the setting is enabled
+    if convert_to_mixed and numerator >= denominator:
         whole_part = numerator // denominator
         whole_text = num2words(whole_part, lang='ru')
         whole_word = _get_noun_plural_form(whole_part, 'целая', 'целых', 'целых')

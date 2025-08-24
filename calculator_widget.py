@@ -12,6 +12,7 @@ class CalculatorWidget(QWidget):
     def __init__(self):
         super().__init__()
         self.fractions_mode_active = False
+        self.convert_to_mixed = True
 
         self.layout = QVBoxLayout(self)
         self.display = QLineEdit()
@@ -79,7 +80,7 @@ class CalculatorWidget(QWidget):
             result = eval(expression, {"Fraction": Fraction})
 
             if self.fractions_mode_active:
-                display_text = convert_fraction_to_words(result)
+                display_text = convert_fraction_to_words(result, convert_to_mixed=self.convert_to_mixed)
             else:
                 display_text = str(result)
 
