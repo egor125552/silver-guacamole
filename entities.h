@@ -20,12 +20,20 @@ public:
     int maxHealth = 100;
     bool isAlive = true;
     sf::Vector3f position;
-    sf::Clock lastDamageTakenClock;
-    sf::Clock lastAttackClock;
+
+    bool isStunned = false;
 
     virtual ~Character() = default;
 
     virtual bool takeDamage(int damage, SoundEngine& engine, Character* attacker = nullptr, bool guaranteedStun = false);
+    sf::Clock lastAttackClock;
+
+    virtual void stunFor(float duration);
+
+protected:
+    sf::Clock lastDamageTakenClock;
+    sf::Clock stunClock;
+    float currentStunDuration = 0.f;
 };
 
 class Player : public Character {
@@ -40,11 +48,9 @@ public:
     bool isRunning = false;
     bool godMode = false;
     bool isCrouching = false;
-    bool isStunned = false;
     WeaponType currentWeapon = WeaponType::FIST;
 
 private:
-    sf::Clock stunClock;
     float healthRegenBuffer = 0.0f;
     sf::Clock healthRegenDelayClock;
 
@@ -72,7 +78,6 @@ public:
     AIState state = AIState::PATROLLING;
     float detectionLevel = 0.0f;
     bool hasReactedToDeath = false;
-    bool isStunned = false; // НОВОЕ: Флаг оглушения
 
 private:
     sf::Vector3f targetPosition;
@@ -80,7 +85,6 @@ private:
     sf::Clock stateTimer;
     sf::Clock stepClock;
     sf::Clock deathClock;
-    sf::Clock stunClock; // НОВОЕ: Таймер для отслеживания длительности оглушения
     bool isMoving = false;
     bool isWaiting = false;
 

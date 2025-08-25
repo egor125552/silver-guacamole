@@ -4,6 +4,15 @@
 #include <cmath>
 #include <algorithm>
 #include <optional>
+#include <iostream>
+
+void Character::stunFor(float duration) {
+    if (duration > 0.f) {
+        isStunned = true;
+        stunClock.restart();
+        currentStunDuration = duration;
+    }
+}
 
 bool Character::takeDamage(int damage, SoundEngine& engine, Character* attacker, bool guaranteedStun) {
     if (!isAlive) return false;
@@ -16,7 +25,7 @@ bool Character::takeDamage(int damage, SoundEngine& engine, Character* attacker,
 Player::Player(const GameSettings& settings) { reset(settings); }
 void Player::update(float deltaTime, const GameSettings& settings) {
     if (isStunned) {
-        if (stunClock.getElapsedTime().asSeconds() > 5.f) { // 5 second stun duration for player
+        if (stunClock.getElapsedTime().asSeconds() > currentStunDuration) {
             isStunned = false;
         } else {
             return; // Can't do anything while stunned
@@ -38,8 +47,7 @@ bool Player::takeDamage(int damage, SoundEngine& engine, Character* attacker, bo
     if (godMode || lastDamageTakenClock.getElapsedTime().asSeconds() < 0.2f) return false;
 
     if (guaranteedStun) {
-        isStunned = true;
-        stunClock.restart();
+        stunFor(5.f); // Stun player for 5 seconds
         // We can reuse the NPC stun sound for the player for now
         engine.playSound("Stun", {0,0,0}, 100.f, true);
     }
@@ -103,7 +111,7 @@ void NPC::update(float deltaTime, Player& player, SoundEngine& engine, const Gam
     if (!isAlive) return;
 
     if (isStunned) {
-        if (stunClock.getElapsedTime().asSeconds() > settings.npcStunDuration) {
+        if (stunClock.getElapsedTime().asSeconds() > currentStunDuration) {
             isStunned = false;
         } else {
             return;
@@ -319,12 +327,10 @@ bool NPC::takeDamage(int damage, SoundEngine& engine, Character* attacker, bool 
 
     if (result && isAlive) {
         if (guaranteedStun) {
-            isStunned = true;
-            stunClock.restart();
+            stunFor(5.f); // Taser stun is 5 seconds
             engine.playSound("Stun", position, 100.f);
         } else if (getInt(1, 100) <= engine.getSettings().npcStunChanceOnDamage) {
-            isStunned = true;
-            stunClock.restart();
+            stunFor(engine.getSettings().npcStunDuration); // Regular damage stun
             engine.playSound("Stun", position, 100.f);
         }
         if (state != AIState::COMBAT) {
