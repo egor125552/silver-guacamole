@@ -9,8 +9,8 @@ set(CMAKE_DEPENDS_LANGUAGES
 # The set of dependency files which are needed:
 set(CMAKE_DEPENDS_DEPENDENCY_FILES
   "/app/SoundEngine.cpp" "CMakeFiles/StealthActionGame.dir/SoundEngine.cpp.o" "gcc" "CMakeFiles/StealthActionGame.dir/SoundEngine.cpp.o.d"
-  "/app/debug_main.cpp" "CMakeFiles/StealthActionGame.dir/debug_main.cpp.o" "gcc" "CMakeFiles/StealthActionGame.dir/debug_main.cpp.o.d"
   "/app/entities.cpp" "CMakeFiles/StealthActionGame.dir/entities.cpp.o" "gcc" "CMakeFiles/StealthActionGame.dir/entities.cpp.o.d"
+  "/app/main.cpp" "CMakeFiles/StealthActionGame.dir/main.cpp.o" "gcc" "CMakeFiles/StealthActionGame.dir/main.cpp.o.d"
   )
 
 # Targets to which this target links which contain Fortran sources.

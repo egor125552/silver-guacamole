@@ -7,6 +7,9 @@
 #include <optional>
 #include <iostream>
 
+// Forward declaration for the global error logging function from SoundEngine.cpp
+void logError(const std::string& message);
+
 void Character::stunFor(float duration) {
     if (duration > 0.f) {
         isStunned = true;
@@ -371,6 +374,7 @@ bool NPC::takeDamage(int damage, SoundEngine& engine, Character* attacker, bool 
         if (guaranteedStun) {
             stunFor(5.f); // Taser stun is 5 seconds
             engine.playSound("Stun", position, 100.f);
+            logError("DEBUG_STUN"); // Log message for the test script
         } else if (getInt(1, 100) <= engine.getSettings().npcStunChanceOnDamage) {
             stunFor(engine.getSettings().npcStunDuration); // Regular damage stun
             engine.playSound("Stun", position, 100.f);

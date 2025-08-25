@@ -1,4 +1,4 @@
-CMakeFiles/StealthActionGame.dir/debug_main.cpp.o: /app/debug_main.cpp \
+CMakeFiles/StealthActionGame.dir/main.cpp.o: /app/main.cpp \
  /usr/include/stdc-predef.h /app/SoundEngine.h \
  /usr/local/include/SFML/Graphics.hpp \
  /usr/local/include/SFML/Graphics/BlendMode.hpp \

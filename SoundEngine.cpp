@@ -47,6 +47,7 @@ SoundEngine::SoundEngine()
     std::cout << "DEBUG: loadSettings() done." << std::endl;
 
     try {
+        audioInitialized = true; // Assume success initially
         std::cout << "DEBUG: Loading sounds..." << std::endl;
         loadSounds();
         std::cout << "DEBUG: loadSounds() done." << std::endl;
@@ -64,6 +65,7 @@ SoundEngine::SoundEngine()
         detectionTickSound.setRelativeToListener(true);
     } catch (const std::exception& e) {
         logError("AUDIO_ERROR: Failed to initialize sounds. Game will run without audio. Error: " + std::string(e.what()));
+        audioInitialized = false;
         // Clear buffers so we don't try to use them
         soundBuffers.clear();
     }
@@ -190,9 +192,15 @@ void SoundEngine::run() {
                 stepClock.restart();
             }
         } else if (gameState == GameState::PlayerDying) {
-            if (playerDeathSound.getStatus() != sf::Sound::Status::Playing) {
+            if (audioInitialized && playerDeathSound.getStatus() != sf::Sound::Status::Playing) {
                 gameState = GameState::GameOver;
                 lowHealthSound.stop(); detectionTickSound.stop();
+            } else if (!audioInitialized) {
+                // If there's no audio, just switch to game over after a short delay
+                static sf::Clock deathTimer;
+                if (deathTimer.getElapsedTime().asSeconds() > 2.0f) {
+                     gameState = GameState::GameOver;
+                }
             }
         }
         render();
@@ -503,6 +511,7 @@ void SoundEngine::activateSonar() {
 }
 
 void SoundEngine::updateProximitySonar() {
+    if (!audioInitialized) return;
     NPC* closestNpc = nullptr;
     float minDistance = std::numeric_limits<float>::max();
     for (const auto& npc : npcs) {
@@ -525,6 +534,7 @@ void SoundEngine::updateProximitySonar() {
 }
 
 void SoundEngine::updateLowHealthSound() {
+    if (!audioInitialized) return;
     bool isHealthLow = player->isAlive && (player->health <= settings.lowHealthThreshold);
     if (isHealthLow && lowHealthSound.getStatus() != sf::Sound::Status::Playing) {
         lowHealthSound.play();
@@ -544,7 +554,9 @@ void SoundEngine::onNpcSpottedPlayer(NPC* spottedBy, bool forceCombat) {
         playSound("battle_cry", spottedBy->position, 100.f, false, getFloat(0.9f, 1.1f));
     }
 
-    detectionTickSound.stop();
+    if (audioInitialized) {
+        detectionTickSound.stop();
+    }
 }
 
 void SoundEngine::onNpcDied(NPC* deadNpc) {
@@ -552,6 +564,7 @@ void SoundEngine::onNpcDied(NPC* deadNpc) {
 }
 
 void SoundEngine::playSound(const std::string& name, sf::Vector3f position, float volume, bool isListenerRelative, float pitch) {
+    if (!audioInitialized) return;
     if (soundBuffers.find(name) == soundBuffers.end()) return;
     sf::Sound& sound = soundPool[currentSoundIndex];
     sound.stop();

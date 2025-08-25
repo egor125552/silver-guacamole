@@ -83,6 +83,9 @@ private:
     sf::Clock sonarClock;
     sf::Clock proximitySonarClock;
 
+    // --- Состояние систем ---
+    bool audioInitialized = false;
+
     // --- Инициализация ---
     void setupConsole();
     void loadSettings();

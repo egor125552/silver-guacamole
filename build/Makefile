@@ -153,30 +153,6 @@ SoundEngine.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/StealthActionGame.dir/build.make CMakeFiles/StealthActionGame.dir/SoundEngine.cpp.s
 .PHONY : SoundEngine.cpp.s
 
-debug_main.o: debug_main.cpp.o
-.PHONY : debug_main.o
-
-# target to build an object file
-debug_main.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/StealthActionGame.dir/build.make CMakeFiles/StealthActionGame.dir/debug_main.cpp.o
-.PHONY : debug_main.cpp.o
-
-debug_main.i: debug_main.cpp.i
-.PHONY : debug_main.i
-
-# target to preprocess a source file
-debug_main.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/StealthActionGame.dir/build.make CMakeFiles/StealthActionGame.dir/debug_main.cpp.i
-.PHONY : debug_main.cpp.i
-
-debug_main.s: debug_main.cpp.s
-.PHONY : debug_main.s
-
-# target to generate assembly for a file
-debug_main.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/StealthActionGame.dir/build.make CMakeFiles/StealthActionGame.dir/debug_main.cpp.s
-.PHONY : debug_main.cpp.s
-
 entities.o: entities.cpp.o
 .PHONY : entities.o
 
@@ -201,6 +177,30 @@ entities.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/StealthActionGame.dir/build.make CMakeFiles/StealthActionGame.dir/entities.cpp.s
 .PHONY : entities.cpp.s
 
+main.o: main.cpp.o
+.PHONY : main.o
+
+# target to build an object file
+main.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/StealthActionGame.dir/build.make CMakeFiles/StealthActionGame.dir/main.cpp.o
+.PHONY : main.cpp.o
+
+main.i: main.cpp.i
+.PHONY : main.i
+
+# target to preprocess a source file
+main.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/StealthActionGame.dir/build.make CMakeFiles/StealthActionGame.dir/main.cpp.i
+.PHONY : main.cpp.i
+
+main.s: main.cpp.s
+.PHONY : main.s
+
+# target to generate assembly for a file
+main.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/StealthActionGame.dir/build.make CMakeFiles/StealthActionGame.dir/main.cpp.s
+.PHONY : main.cpp.s
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -213,12 +213,12 @@ help:
 	@echo "... SoundEngine.o"
 	@echo "... SoundEngine.i"
 	@echo "... SoundEngine.s"
-	@echo "... debug_main.o"
-	@echo "... debug_main.i"
-	@echo "... debug_main.s"
 	@echo "... entities.o"
 	@echo "... entities.i"
 	@echo "... entities.s"
+	@echo "... main.o"
+	@echo "... main.i"
+	@echo "... main.s"
 .PHONY : help
 
 
