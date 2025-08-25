@@ -78,9 +78,21 @@ SoundEngine::SoundEngine()
         soundPool.emplace_back(dummyBuffer);
     }
 
+    // Weapon definitions
     weapons[WeaponType::FIST]      = {settings.fistDamage, 0.5f, "punch", false, settings.fistVolume};
     weapons[WeaponType::PISTOL]    = {settings.pistolDamage, 0.4f, "pistol", false, settings.pistolVolume};
-    weapons[WeaponType::TASER]     = {settings.taserDamage, settings.taserCooldown, "sniper", false, settings.taserVolume}; // Placeholder sound
+    weapons[WeaponType::TASER]     = {settings.taserDamage, settings.taserCooldown, "Taser_Fire", false, settings.taserVolume};
+    weapons[WeaponType::AUTOMATIC] = {settings.automaticDamage, 0.1f, "automatic", true, settings.automaticVolume};
+    weapons[WeaponType::SNIPER]    = {settings.sniperDamage, 1.5f, "sniper", false, settings.sniperVolume};
+
+    // New Melee Weapons
+    weapons[WeaponType::MACHETE]   = {settings.macheteDamage, 0.7f, "Blade_Swish", false, settings.macheteVolume};
+    weapons[WeaponType::KNIFE]     = {settings.knifeDamage, 0.4f, "Blade_Swish", false, settings.knifeVolume};
+    weapons[WeaponType::CROWBAR]   = {settings.crowbarDamage, 0.9f, "Blunt_Swish", false, settings.crowbarVolume};
+    weapons[WeaponType::BAT]       = {settings.batDamage, 0.8f, "Blunt_Swish", false, settings.batVolume};
+    weapons[WeaponType::SHANK]     = {settings.shankDamage, 0.3f, "Blade_Swish", false, settings.shankVolume};
+    weapons[WeaponType::BATON]     = {settings.batonDamage, 0.6f, "Blunt_Swish", false, settings.batonVolume};
+
 
     std::cout << "DEBUG: Constructor end." << std::endl;
 }
@@ -170,6 +182,14 @@ void SoundEngine::generateSounds() {
     samples.assign(44100/15, 0); for (size_t i=0; i < samples.size(); ++i) { float t = static_cast<float>(i)/44100.0f; samples[i] = static_cast<std::int16_t>(20000.0f*sin(2*3.14159f*600.0f*t)*exp(-t*40.0f)); } success = soundBuffers["MenuSelect"].loadFromSamples(samples.data(), samples.size(), 1, 44100, {sf::SoundChannel::Mono}); if(!success) throw std::runtime_error("Failed to generate MenuSelect");
     samples.assign(44100/10, 0); for (size_t i=0; i < samples.size(); ++i) { float t = static_cast<float>(i)/44100.0f; samples[i] = static_cast<std::int16_t>(22000.0f*sin(2*3.14159f*440.0f*t)*exp(-t*30.0f)); } success = soundBuffers["MenuConfirm"].loadFromSamples(samples.data(), samples.size(), 1, 44100, {sf::SoundChannel::Mono}); if(!success) throw std::runtime_error("Failed to generate MenuConfirm");
     samples.assign(44100/8, 0); for (size_t i=0; i < samples.size(); ++i) { float t = static_cast<float>(i)/44100.0f; float freq = 800.0f - sin(t * 3.14159f * 4.0f) * 400.0f; samples[i] = static_cast<std::int16_t>(28000.0f * sin(2*3.14159f*freq*t) * exp(-t*20.0f)); } success = soundBuffers["Stun"].loadFromSamples(samples.data(), samples.size(), 1, 44100, {sf::SoundChannel::Mono}); if(!success) throw std::runtime_error("Failed to generate Stun");
+
+    // --- New Weapon Sounds ---
+    // Taser Fire
+    samples.assign(44100 / 4, 0); for (size_t i = 0; i < samples.size(); ++i) { float t = static_cast<float>(i) / 44100.0f; float noise = static_cast<float>(rand()) / RAND_MAX * 2.0f - 1.0f; samples[i] = static_cast<std::int16_t>(25000.0f * (sin(2 * 3.14159f * 1200.0f * t) + 0.5f * noise) * exp(-t * 15.0f)); } success = soundBuffers["Taser_Fire"].loadFromSamples(samples.data(), samples.size(), 1, 44100, {sf::SoundChannel::Mono}); if (!success) throw std::runtime_error("Failed to generate Taser_Fire");
+    // Knife/Shank/Machete (Blade Swish)
+    samples.assign(44100 / 5, 0); for (size_t i = 0; i < samples.size(); ++i) { float t = static_cast<float>(i) / 44100.0f; float noise = (static_cast<float>(rand()) / RAND_MAX - 0.5f) * 2.0f; float envelope = exp(-t * 30.0f); samples[i] = static_cast<std::int16_t>(30000.0f * noise * envelope); } success = soundBuffers["Blade_Swish"].loadFromSamples(samples.data(), samples.size(), 1, 44100, {sf::SoundChannel::Mono}); if (!success) throw std::runtime_error("Failed to generate Blade_Swish");
+    // Bat/Baton/Crowbar (Blunt Swish)
+    samples.assign(44100 / 6, 0); for (size_t i = 0; i < samples.size(); ++i) { float t = static_cast<float>(i) / 44100.0f; float freq = 400.0f - t * 2000.0f; samples[i] = static_cast<std::int16_t>(20000.0f * sin(2 * 3.14159f * freq * t) * exp(-t * 25.0f)); } success = soundBuffers["Blunt_Swish"].loadFromSamples(samples.data(), samples.size(), 1, 44100, {sf::SoundChannel::Mono}); if (!success) throw std::runtime_error("Failed to generate Blunt_Swish");
 }
 
 void SoundEngine::run() {
@@ -444,7 +464,7 @@ void SoundEngine::handleNpcActions(float deltaTime) {
 }
 
 void SoundEngine::handlePlayerAttack() {
-    if (!player->isAlive) return;
+    if (!player->isAlive || player->isStunned) return; // Player cannot attack while stunned
     const auto& weapon = weapons.at(player->currentWeapon);
     if (player->lastAttackClock.getElapsedTime().asSeconds() < weapon.cooldown) return;
     player->lastAttackClock.restart();

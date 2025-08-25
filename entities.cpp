@@ -360,7 +360,13 @@ void NPC::respawn(sf::Vector3f newPosition, const GameSettings& settings) {
 }
 
 bool NPC::takeDamage(int damage, SoundEngine& engine, Character* attacker, bool guaranteedStun) {
-    if (!isAlive || isStunned) return false;
+    if (!isAlive) return false;
+
+    // A stunned character should still be able to take damage.
+    // The check for `isStunned` was moved to prevent actions, not damage.
+    if (isStunned) {
+        // Optional: Maybe play a different sound or have a damage multiplier later.
+    }
 
     engine.playSound("hit", position);
     float healthPercentage = static_cast<float>(health - damage) / maxHealth;
