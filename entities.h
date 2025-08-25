@@ -8,6 +8,7 @@
 #include "ai_definitions.h"
 
 class SoundEngine;
+class NPC;
 
 enum class AIBehavior {
     AGGRESSOR,
@@ -49,19 +50,24 @@ public:
     bool godMode = false;
     bool isCrouching = false;
     WeaponType currentWeapon = WeaponType::FIST;
+    bool inCombatStance = false;
+    bool isDodging = false;
 
 private:
     float healthRegenBuffer = 0.0f;
     sf::Clock healthRegenDelayClock;
+    sf::Clock timeSinceLastCombatEvent;
+    sf::Clock dodgeTimer;
 
 public:
     explicit Player(const GameSettings& settings);
-    void update(float deltaTime, const GameSettings& settings);
+    void update(float deltaTime, const GameSettings& settings, const std::vector<std::unique_ptr<NPC>>& npcs);
     void setPosition(const sf::Vector3f& newPos);
     void switchWeapon(WeaponType newWeapon);
     void reset(const GameSettings& settings);
     bool takeDamage(int damage, SoundEngine& engine, Character* attacker = nullptr, bool guaranteedStun = false) override;
     void toggleCrouch();
+    void dodge();
     bool isRegenOnCooldown(const GameSettings& settings) const;
 };
 

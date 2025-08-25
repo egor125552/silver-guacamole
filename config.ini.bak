@@ -28,7 +28,7 @@ SniperVolume = 120.0
 ; --- Электрошокер ---
 TaserDamage = 0
 TaserCooldown = 3.0
-TaserRange = 200.0
+TaserRange = 5.0
 TaserVolume = 110.0
 
 ; === Настройки Игрового Мира (НОВЫЕ) ===

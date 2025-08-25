@@ -1,0 +1,3 @@
+/app/minimal_test_build/CMakeFiles/minimal_test.dir
+/app/minimal_test_build/CMakeFiles/edit_cache.dir
+/app/minimal_test_build/CMakeFiles/rebuild_cache.dir

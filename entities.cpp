@@ -2,6 +2,7 @@
 #include "SoundEngine.h"
 #include "utils.h"
 #include <cmath>
+#include <sstream>
 #include <algorithm>
 #include <optional>
 #include <iostream>
@@ -23,7 +24,7 @@ bool Character::takeDamage(int damage, SoundEngine& engine, Character* attacker,
 }
 
 Player::Player(const GameSettings& settings) { reset(settings); }
-void Player::update(float deltaTime, const GameSettings& settings) {
+void Player::update(float deltaTime, const GameSettings& settings, const std::vector<std::unique_ptr<NPC>>& npcs) {
     if (isStunned) {
         if (stunClock.getElapsedTime().asSeconds() > currentStunDuration) {
             isStunned = false;
@@ -32,6 +33,31 @@ void Player::update(float deltaTime, const GameSettings& settings) {
         }
     }
     if (!isAlive) return;
+
+    // Dodge timer logic
+    if (isDodging && dodgeTimer.getElapsedTime().asSeconds() > 0.5f) { // 0.5 second dodge duration
+        isDodging = false;
+    }
+
+    // Combat stance logic
+    if (inCombatStance) {
+        bool enemyNearby = false;
+        for (const auto& npc : npcs) {
+            if (npc->isAlive && npc->state == AIState::COMBAT) {
+                float distance = std::hypot(position.x - npc->position.x, position.z - npc->position.z);
+                if (distance < 25.0f) { // 25m check radius
+                    enemyNearby = true;
+                    timeSinceLastCombatEvent.restart(); // Keep stance active if enemy is near
+                    break;
+                }
+            }
+        }
+
+        if (timeSinceLastCombatEvent.getElapsedTime().asSeconds() > 10.0f && !enemyNearby) {
+            inCombatStance = false;
+        }
+    }
+
     if (health < maxHealth && healthRegenDelayClock.getElapsedTime().asSeconds() > settings.healthRegenDelay) {
         healthRegenBuffer += settings.healthRegenRate * deltaTime;
         if (healthRegenBuffer >= 1.0f) {
@@ -44,7 +70,7 @@ void Player::update(float deltaTime, const GameSettings& settings) {
 void Player::setPosition(const sf::Vector3f& newPos) { position = newPos; sf::Listener::setPosition(position); }
 void Player::switchWeapon(WeaponType newWeapon) { if (isAlive) currentWeapon = newWeapon; }
 bool Player::takeDamage(int damage, SoundEngine& engine, Character* attacker, bool guaranteedStun) {
-    if (godMode || lastDamageTakenClock.getElapsedTime().asSeconds() < 0.2f) return false;
+    if (godMode || isDodging || lastDamageTakenClock.getElapsedTime().asSeconds() < 0.2f) return false;
 
     if (guaranteedStun) {
         stunFor(5.f); // Stun player for 5 seconds
@@ -54,6 +80,8 @@ bool Player::takeDamage(int damage, SoundEngine& engine, Character* attacker, bo
 
     healthRegenDelayClock.restart();
     healthRegenBuffer = 0.0f;
+    inCombatStance = true;
+    timeSinceLastCombatEvent.restart();
     engine.playSound("player_hit", {0,0,0}, 100.f, true);
     float healthPercentage = static_cast<float>(health - damage) / maxHealth;
     if (healthPercentage < 0) healthPercentage = 0;
@@ -62,13 +90,21 @@ bool Player::takeDamage(int damage, SoundEngine& engine, Character* attacker, bo
     return Character::takeDamage(damage, engine, attacker);
 }
 void Player::reset(const GameSettings& settings) {
-    isAlive = true; godMode = false; isRunning = false; isCrouching = false;
+    isAlive = true; godMode = false; isRunning = false; isCrouching = false; inCombatStance = false; isDodging = false;
     maxHealth = settings.playerHealth; health = settings.playerHealth; healthRegenBuffer = 0.0f;
     position = {0.f, 0.f, 0.f}; setPosition(position); runSpeed = settings.playerRunSpeed;
     currentWeapon = WeaponType::FIST;
-    lastAttackClock.restart(); lastDamageTakenClock.restart(); healthRegenDelayClock.restart();
+    lastAttackClock.restart(); lastDamageTakenClock.restart(); healthRegenDelayClock.restart(); timeSinceLastCombatEvent.restart();
 }
 void Player::toggleCrouch() { if (isAlive) { isCrouching = !isCrouching; if (isCrouching) isRunning = false; } }
+
+void Player::dodge() {
+    if (isAlive && inCombatStance && !isDodging) {
+        isDodging = true;
+        dodgeTimer.restart();
+        // Maybe play a sound here in the future
+    }
+}
 bool Player::isRegenOnCooldown(const GameSettings& settings) const { return healthRegenDelayClock.getElapsedTime().asSeconds() < settings.healthRegenDelay; }
 
 NPC::NPC(sf::Vector3f startPos, NPCType npcType, const GameSettings& settings) : type(npcType) { position = startPos; respawn(startPos, settings); }
@@ -292,18 +328,24 @@ void NPC::respawn(sf::Vector3f newPosition, const GameSettings& settings) {
     walkSpeed = settings.npcWalkSpeed; runSpeed = settings.npcRunSpeed; isWaiting = false;
 
     if (type == NPCType::REGULAR) {
-        weapon = WeaponType::FIST;
+        const std::vector<WeaponType> prisonerWeapons = {
+            WeaponType::FIST, WeaponType::SHANK, WeaponType::KNIFE, WeaponType::CROWBAR, WeaponType::BAT
+        };
+        weapon = prisonerWeapons[getInt(0, prisonerWeapons.size() - 1)];
         behavior = AIBehavior::AGGRESSOR;
         maxHealth = settings.regularHealth;
     } else if (type == NPCType::GUARD) {
-        // Guards can have a pistol or a taser
-        if (getInt(0, 1) == 0) {
-            weapon = WeaponType::PISTOL;
+        const std::vector<WeaponType> guardWeapons = {
+            WeaponType::BATON, WeaponType::PISTOL, WeaponType::TASER
+        };
+        weapon = guardWeapons[getInt(0, guardWeapons.size() - 1)];
+        // Behavior depends on weapon
+        if (weapon == WeaponType::BATON) {
+            behavior = AIBehavior::AGGRESSOR;
         } else {
-            weapon = WeaponType::TASER;
+            behavior = AIBehavior::SUPPORT;
         }
-        behavior = AIBehavior::SUPPORT; // Both are ranged, so support seems appropriate
-        maxHealth = settings.shooterHealth; // Use shooter health for guards
+        maxHealth = settings.shooterHealth; // Guards are tougher
     } else { // Fallback for other types like SHOOTER or BOSS for now
         weapon = WeaponType::PISTOL;
         behavior = AIBehavior::SUPPORT;

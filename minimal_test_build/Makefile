@@ -57,10 +57,10 @@ RM = /usr/bin/cmake -E rm -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /app
+CMAKE_SOURCE_DIR = /app/minimal_test_build
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /app/build
+CMAKE_BINARY_DIR = /app/minimal_test_build
 
 #=============================================================================
 # Targets provided globally by CMake.
@@ -87,9 +87,9 @@ rebuild_cache/fast: rebuild_cache
 
 # The main all target
 all: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /app/build/CMakeFiles /app/build//CMakeFiles/progress.marks
+	$(CMAKE_COMMAND) -E cmake_progress_start /app/minimal_test_build/CMakeFiles /app/minimal_test_build//CMakeFiles/progress.marks
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 all
-	$(CMAKE_COMMAND) -E cmake_progress_start /app/build/CMakeFiles 0
+	$(CMAKE_COMMAND) -E cmake_progress_start /app/minimal_test_build/CMakeFiles 0
 .PHONY : all
 
 # The main clean target
@@ -117,89 +117,41 @@ depend:
 .PHONY : depend
 
 #=============================================================================
-# Target rules for targets named StealthActionGame
+# Target rules for targets named minimal_test
 
 # Build rule for target.
-StealthActionGame: cmake_check_build_system
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 StealthActionGame
-.PHONY : StealthActionGame
+minimal_test: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 minimal_test
+.PHONY : minimal_test
 
 # fast build rule for target.
-StealthActionGame/fast:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/StealthActionGame.dir/build.make CMakeFiles/StealthActionGame.dir/build
-.PHONY : StealthActionGame/fast
+minimal_test/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/minimal_test.dir/build.make CMakeFiles/minimal_test.dir/build
+.PHONY : minimal_test/fast
 
-SoundEngine.o: SoundEngine.cpp.o
-.PHONY : SoundEngine.o
-
-# target to build an object file
-SoundEngine.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/StealthActionGame.dir/build.make CMakeFiles/StealthActionGame.dir/SoundEngine.cpp.o
-.PHONY : SoundEngine.cpp.o
-
-SoundEngine.i: SoundEngine.cpp.i
-.PHONY : SoundEngine.i
-
-# target to preprocess a source file
-SoundEngine.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/StealthActionGame.dir/build.make CMakeFiles/StealthActionGame.dir/SoundEngine.cpp.i
-.PHONY : SoundEngine.cpp.i
-
-SoundEngine.s: SoundEngine.cpp.s
-.PHONY : SoundEngine.s
-
-# target to generate assembly for a file
-SoundEngine.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/StealthActionGame.dir/build.make CMakeFiles/StealthActionGame.dir/SoundEngine.cpp.s
-.PHONY : SoundEngine.cpp.s
-
-debug_main.o: debug_main.cpp.o
-.PHONY : debug_main.o
+minimal_test.o: minimal_test.cpp.o
+.PHONY : minimal_test.o
 
 # target to build an object file
-debug_main.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/StealthActionGame.dir/build.make CMakeFiles/StealthActionGame.dir/debug_main.cpp.o
-.PHONY : debug_main.cpp.o
+minimal_test.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/minimal_test.dir/build.make CMakeFiles/minimal_test.dir/minimal_test.cpp.o
+.PHONY : minimal_test.cpp.o
 
-debug_main.i: debug_main.cpp.i
-.PHONY : debug_main.i
-
-# target to preprocess a source file
-debug_main.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/StealthActionGame.dir/build.make CMakeFiles/StealthActionGame.dir/debug_main.cpp.i
-.PHONY : debug_main.cpp.i
-
-debug_main.s: debug_main.cpp.s
-.PHONY : debug_main.s
-
-# target to generate assembly for a file
-debug_main.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/StealthActionGame.dir/build.make CMakeFiles/StealthActionGame.dir/debug_main.cpp.s
-.PHONY : debug_main.cpp.s
-
-entities.o: entities.cpp.o
-.PHONY : entities.o
-
-# target to build an object file
-entities.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/StealthActionGame.dir/build.make CMakeFiles/StealthActionGame.dir/entities.cpp.o
-.PHONY : entities.cpp.o
-
-entities.i: entities.cpp.i
-.PHONY : entities.i
+minimal_test.i: minimal_test.cpp.i
+.PHONY : minimal_test.i
 
 # target to preprocess a source file
-entities.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/StealthActionGame.dir/build.make CMakeFiles/StealthActionGame.dir/entities.cpp.i
-.PHONY : entities.cpp.i
+minimal_test.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/minimal_test.dir/build.make CMakeFiles/minimal_test.dir/minimal_test.cpp.i
+.PHONY : minimal_test.cpp.i
 
-entities.s: entities.cpp.s
-.PHONY : entities.s
+minimal_test.s: minimal_test.cpp.s
+.PHONY : minimal_test.s
 
 # target to generate assembly for a file
-entities.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/StealthActionGame.dir/build.make CMakeFiles/StealthActionGame.dir/entities.cpp.s
-.PHONY : entities.cpp.s
+minimal_test.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/minimal_test.dir/build.make CMakeFiles/minimal_test.dir/minimal_test.cpp.s
+.PHONY : minimal_test.cpp.s
 
 # Help Target
 help:
@@ -209,16 +161,10 @@ help:
 	@echo "... depend"
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
-	@echo "... StealthActionGame"
-	@echo "... SoundEngine.o"
-	@echo "... SoundEngine.i"
-	@echo "... SoundEngine.s"
-	@echo "... debug_main.o"
-	@echo "... debug_main.i"
-	@echo "... debug_main.s"
-	@echo "... entities.o"
-	@echo "... entities.i"
-	@echo "... entities.s"
+	@echo "... minimal_test"
+	@echo "... minimal_test.o"
+	@echo "... minimal_test.i"
+	@echo "... minimal_test.s"
 .PHONY : help
 
 

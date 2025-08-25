@@ -40,12 +40,19 @@ SoundEngine::SoundEngine()
       playerDeathSound(dummyBuffer), sonarSound(dummyBuffer),
       lowHealthSound(dummyBuffer), detectionTickSound(dummyBuffer)
 {
+    std::cout << "DEBUG: Constructor start." << std::endl;
     setupConsole();
+    std::cout << "DEBUG: setupConsole() done." << std::endl;
     loadSettings();
+    std::cout << "DEBUG: loadSettings() done." << std::endl;
 
     try {
+        std::cout << "DEBUG: Loading sounds..." << std::endl;
         loadSounds();
+        std::cout << "DEBUG: loadSounds() done." << std::endl;
+        std::cout << "DEBUG: Generating sounds..." << std::endl;
         generateSounds();
+        std::cout << "DEBUG: generateSounds() done." << std::endl;
         playerDeathSound.setBuffer(soundBuffers.at("player_death"));
         playerDeathSound.setRelativeToListener(true);
         sonarSound.setBuffer(soundBuffers.at("sonar"));
@@ -61,7 +68,9 @@ SoundEngine::SoundEngine()
         soundBuffers.clear();
     }
 
+    std::cout << "DEBUG: Creating player..." << std::endl;
     player = std::make_unique<Player>(settings);
+    std::cout << "DEBUG: Player created." << std::endl;
     soundPool.reserve(SOUND_POOL_SIZE);
     for (size_t i = 0; i < SOUND_POOL_SIZE; ++i) {
         soundPool.emplace_back(dummyBuffer);
@@ -70,6 +79,8 @@ SoundEngine::SoundEngine()
     weapons[WeaponType::FIST]      = {settings.fistDamage, 0.5f, "punch", false, settings.fistVolume};
     weapons[WeaponType::PISTOL]    = {settings.pistolDamage, 0.4f, "pistol", false, settings.pistolVolume};
     weapons[WeaponType::TASER]     = {settings.taserDamage, settings.taserCooldown, "sniper", false, settings.taserVolume}; // Placeholder sound
+
+    std::cout << "DEBUG: Constructor end." << std::endl;
 }
 
 SoundEngine::~SoundEngine() = default;
@@ -105,6 +116,22 @@ void SoundEngine::loadSettings() {
                 else if (key == "PistolDamage") settings.pistolDamage = std::stoi(value);
                 else if (key == "FistVolume") settings.fistVolume = std::stof(value);
                 else if (key == "PistolVolume") settings.pistolVolume = std::stof(value);
+                else if (key == "TaserDamage") settings.taserDamage = std::stoi(value);
+                else if (key == "TaserCooldown") settings.taserCooldown = std::stof(value);
+                else if (key == "TaserRange") settings.taserRange = std::stof(value);
+                else if (key == "TaserVolume") settings.taserVolume = std::stof(value);
+                else if (key == "MacheteDamage") settings.macheteDamage = std::stoi(value);
+                else if (key == "MacheteVolume") settings.macheteVolume = std::stof(value);
+                else if (key == "KnifeDamage") settings.knifeDamage = std::stoi(value);
+                else if (key == "KnifeVolume") settings.knifeVolume = std::stof(value);
+                else if (key == "CrowbarDamage") settings.crowbarDamage = std::stoi(value);
+                else if (key == "CrowbarVolume") settings.crowbarVolume = std::stof(value);
+                else if (key == "BatDamage") settings.batDamage = std::stoi(value);
+                else if (key == "BatVolume") settings.batVolume = std::stof(value);
+                else if (key == "ShankDamage") settings.shankDamage = std::stoi(value);
+                else if (key == "ShankVolume") settings.shankVolume = std::stof(value);
+                else if (key == "BatonDamage") settings.batonDamage = std::stoi(value);
+                else if (key == "BatonVolume") settings.batonVolume = std::stof(value);
                 else if (key == "WorldSize") settings.worldSize = std::stof(value);
                 else if (key == "WallCount") settings.wallCount = std::stoi(value);
             } catch (const std::exception& e) {
@@ -153,7 +180,7 @@ void SoundEngine::run() {
         processEvents();
         if (gameState == GameState::Playing) {
             bool isMoving = processInput(deltaTime);
-            player->update(deltaTime, settings);
+            player->update(deltaTime, settings, npcs);
             update(deltaTime);
             static sf::Clock stepClock;
             float stepInterval = player->isCrouching ? Player::CROUCH_STEP_INTERVAL : (player->isRunning ? Player::RUN_STEP_INTERVAL : Player::WALK_STEP_INTERVAL);
@@ -254,6 +281,10 @@ void SoundEngine::processEvents() {
                     default: break;
                 }
                 switch (keyPressed->code) {
+                    case sf::Keyboard::Key::LShift:
+                    case sf::Keyboard::Key::RShift:
+                        player->dodge();
+                        break;
                     case sf::Keyboard::Key::Escape: window.close(); break;
                     case sf::Keyboard::Key::LControl: player->toggleCrouch(); break;
                     case sf::Keyboard::Key::Num1: player->switchWeapon(WeaponType::FIST); break;
@@ -504,9 +535,15 @@ void SoundEngine::updateLowHealthSound() {
 
 void SoundEngine::onNpcSpottedPlayer(NPC* spottedBy, bool forceCombat) {
     if (spottedBy->state == AIState::COMBAT) return;
+
     spottedBy->state = AIState::COMBAT;
     spottedBy->detectionLevel = 0;
-    playSound("battle_cry", spottedBy->position, 100.f, false, getFloat(0.9f, 1.1f));
+
+    // 70% chance to play a battle cry
+    if (getInt(1, 100) <= 70) {
+        playSound("battle_cry", spottedBy->position, 100.f, false, getFloat(0.9f, 1.1f));
+    }
+
     detectionTickSound.stop();
 }
 

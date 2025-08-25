@@ -2,7 +2,7 @@
 #include <SFML/Graphics.hpp>
 
 enum class GameMode { CLASSIC_ACTION, STEALTH_MODE };
-enum class WeaponType { FIST, PISTOL, TASER, AUTOMATIC, SNIPER };
+enum class WeaponType { FIST, PISTOL, TASER, AUTOMATIC, SNIPER, MACHETE, KNIFE, CROWBAR, BAT, SHANK, BATON };
 enum class NPCType { REGULAR, SHOOTER, GUARD, BOSS };
 
 struct GameSettings {
@@ -37,4 +37,18 @@ struct GameSettings {
     float taserCooldown = 3.0f;
     float taserRange = 5.0f;
     float taserVolume = 110.0f;
+
+    // New melee weapons settings
+    int macheteDamage = 55;
+    float macheteVolume = 105.0f;
+    int knifeDamage = 45;
+    float knifeVolume = 95.0f;
+    int crowbarDamage = 50;
+    float crowbarVolume = 110.0f;
+    int batDamage = 40;
+    float batVolume = 100.0f;
+    int shankDamage = 30;
+    float shankVolume = 90.0f;
+    int batonDamage = 35;
+    float batonVolume = 100.0f;
 };

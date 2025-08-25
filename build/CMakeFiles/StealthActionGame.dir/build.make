@@ -69,19 +69,19 @@ include CMakeFiles/StealthActionGame.dir/progress.make
 # Include the compile flags for this target's objects.
 include CMakeFiles/StealthActionGame.dir/flags.make
 
-CMakeFiles/StealthActionGame.dir/main.cpp.o: CMakeFiles/StealthActionGame.dir/flags.make
-CMakeFiles/StealthActionGame.dir/main.cpp.o: /app/main.cpp
-CMakeFiles/StealthActionGame.dir/main.cpp.o: CMakeFiles/StealthActionGame.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/app/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object CMakeFiles/StealthActionGame.dir/main.cpp.o"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/StealthActionGame.dir/main.cpp.o -MF CMakeFiles/StealthActionGame.dir/main.cpp.o.d -o CMakeFiles/StealthActionGame.dir/main.cpp.o -c /app/main.cpp
+CMakeFiles/StealthActionGame.dir/debug_main.cpp.o: CMakeFiles/StealthActionGame.dir/flags.make
+CMakeFiles/StealthActionGame.dir/debug_main.cpp.o: /app/debug_main.cpp
+CMakeFiles/StealthActionGame.dir/debug_main.cpp.o: CMakeFiles/StealthActionGame.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/app/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object CMakeFiles/StealthActionGame.dir/debug_main.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/StealthActionGame.dir/debug_main.cpp.o -MF CMakeFiles/StealthActionGame.dir/debug_main.cpp.o.d -o CMakeFiles/StealthActionGame.dir/debug_main.cpp.o -c /app/debug_main.cpp
 
-CMakeFiles/StealthActionGame.dir/main.cpp.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/StealthActionGame.dir/main.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /app/main.cpp > CMakeFiles/StealthActionGame.dir/main.cpp.i
+CMakeFiles/StealthActionGame.dir/debug_main.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/StealthActionGame.dir/debug_main.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /app/debug_main.cpp > CMakeFiles/StealthActionGame.dir/debug_main.cpp.i
 
-CMakeFiles/StealthActionGame.dir/main.cpp.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/StealthActionGame.dir/main.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /app/main.cpp -o CMakeFiles/StealthActionGame.dir/main.cpp.s
+CMakeFiles/StealthActionGame.dir/debug_main.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/StealthActionGame.dir/debug_main.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /app/debug_main.cpp -o CMakeFiles/StealthActionGame.dir/debug_main.cpp.s
 
 CMakeFiles/StealthActionGame.dir/SoundEngine.cpp.o: CMakeFiles/StealthActionGame.dir/flags.make
 CMakeFiles/StealthActionGame.dir/SoundEngine.cpp.o: /app/SoundEngine.cpp
@@ -113,14 +113,14 @@ CMakeFiles/StealthActionGame.dir/entities.cpp.s: cmake_force
 
 # Object files for target StealthActionGame
 StealthActionGame_OBJECTS = \
-"CMakeFiles/StealthActionGame.dir/main.cpp.o" \
+"CMakeFiles/StealthActionGame.dir/debug_main.cpp.o" \
 "CMakeFiles/StealthActionGame.dir/SoundEngine.cpp.o" \
 "CMakeFiles/StealthActionGame.dir/entities.cpp.o"
 
 # External object files for target StealthActionGame
 StealthActionGame_EXTERNAL_OBJECTS =
 
-StealthActionGame: CMakeFiles/StealthActionGame.dir/main.cpp.o
+StealthActionGame: CMakeFiles/StealthActionGame.dir/debug_main.cpp.o
 StealthActionGame: CMakeFiles/StealthActionGame.dir/SoundEngine.cpp.o
 StealthActionGame: CMakeFiles/StealthActionGame.dir/entities.cpp.o
 StealthActionGame: CMakeFiles/StealthActionGame.dir/build.make
