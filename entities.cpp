@@ -331,24 +331,36 @@ void NPC::respawn(sf::Vector3f newPosition, const GameSettings& settings) {
     walkSpeed = settings.npcWalkSpeed; runSpeed = settings.npcRunSpeed; isWaiting = false;
 
     if (type == NPCType::REGULAR) {
-        const std::vector<WeaponType> prisonerWeapons = {
-            WeaponType::FIST, WeaponType::SHANK, WeaponType::KNIFE, WeaponType::CROWBAR, WeaponType::BAT
-        };
-        weapon = prisonerWeapons[getInt(0, prisonerWeapons.size() - 1)];
         behavior = AIBehavior::AGGRESSOR;
         maxHealth = settings.regularHealth;
+        // Use chances from config
+        if (getInt(1, 100) <= settings.prisonerPistolChance) {
+            weapon = WeaponType::PISTOL;
+        } else {
+            const std::vector<WeaponType> meleeWeapons = {
+                WeaponType::FIST, WeaponType::SHANK, WeaponType::KNIFE, WeaponType::CROWBAR, WeaponType::BAT, WeaponType::MACHETE
+            };
+            weapon = meleeWeapons[getInt(0, meleeWeapons.size() - 1)];
+        }
     } else if (type == NPCType::GUARD) {
-        const std::vector<WeaponType> guardWeapons = {
-            WeaponType::BATON, WeaponType::PISTOL, WeaponType::TASER
-        };
-        weapon = guardWeapons[getInt(0, guardWeapons.size() - 1)];
-        // Behavior depends on weapon
+        maxHealth = settings.shooterHealth; // Guards are tougher
+        int roll = getInt(1, 100);
+        if (roll <= settings.guardPistolChance) {
+            weapon = WeaponType::PISTOL;
+        } else if (roll <= settings.guardPistolChance + settings.guardAutomaticChance) {
+            weapon = WeaponType::AUTOMATIC;
+        } else if (roll <= settings.guardPistolChance + settings.guardAutomaticChance + settings.guardTaserChance) {
+            weapon = WeaponType::TASER;
+        } else {
+            weapon = WeaponType::BATON;
+        }
+
+        // Set behavior based on final weapon
         if (weapon == WeaponType::BATON) {
             behavior = AIBehavior::AGGRESSOR;
         } else {
             behavior = AIBehavior::SUPPORT;
         }
-        maxHealth = settings.shooterHealth; // Guards are tougher
     } else { // Fallback for other types like SHOOTER or BOSS for now
         weapon = WeaponType::PISTOL;
         behavior = AIBehavior::SUPPORT;

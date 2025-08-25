@@ -51,4 +51,10 @@ struct GameSettings {
     float shankVolume = 90.0f;
     int batonDamage = 35;
     float batonVolume = 100.0f;
+
+    // NPC Weapon Spawn Chances (0-100)
+    int guardPistolChance = 40;
+    int guardAutomaticChance = 20;
+    int guardTaserChance = 15;
+    int prisonerPistolChance = 5;
 };
