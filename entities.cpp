@@ -57,7 +57,7 @@ void NPC::move(sf::Vector3f direction, float speed, float deltaTime, const std::
 
     bool collision = false;
     for (const auto& wall : walls) {
-        if (wall.intersects(npcBounds)) {
+        if (wall.findIntersection(npcBounds)) {
             collision = true;
             break;
         }
@@ -69,7 +69,7 @@ void NPC::move(sf::Vector3f direction, float speed, float deltaTime, const std::
         sf::Vector3f slideXPos = position + sf::Vector3f(direction.x, 0, 0) * speed * deltaTime;
         sf::FloatRect boundsX({slideXPos.x - 0.4f, slideXPos.z - 0.4f}, {0.8f, 0.8f});
         bool collisionX = false;
-        for (const auto& wall : walls) if (wall.intersects(boundsX)) { collisionX = true; break; }
+        for (const auto& wall : walls) if (wall.findIntersection(boundsX)) { collisionX = true; break; }
         if (!collisionX) {
             position = slideXPos;
             return;
@@ -77,7 +77,7 @@ void NPC::move(sf::Vector3f direction, float speed, float deltaTime, const std::
         sf::Vector3f slideZPos = position + sf::Vector3f(0, 0, direction.z) * speed * deltaTime;
         sf::FloatRect boundsZ({slideZPos.x - 0.4f, slideZPos.z - 0.4f}, {0.8f, 0.8f});
         bool collisionZ = false;
-        for (const auto& wall : walls) if (wall.intersects(boundsZ)) { collisionZ = true; break; }
+        for (const auto& wall : walls) if (wall.findIntersection(boundsZ)) { collisionZ = true; break; }
         if (!collisionZ) {
             position = slideZPos;
         }

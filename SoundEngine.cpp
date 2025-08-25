@@ -122,15 +122,15 @@ void SoundEngine::loadSounds() {
 void SoundEngine::generateSounds() {
     std::vector<std::int16_t> samples;
     bool success;
-    samples.assign(44100 / 10, 0); for (size_t i = 0; i < samples.size(); ++i) { float t = static_cast<float>(i)/44100.0f; samples[i] = static_cast<std::int16_t>(15000.0f * sin(2*3.14159f*600.0f*t) * exp(-t*30.0f)); } success = soundBuffers["DetectionTick"].loadFromSamples(samples.data(), samples.size(), 1, 44100); if (!success) throw std::runtime_error("Failed to generate DetectionTick");
-    samples.assign(44100 / 2, 0); for (size_t i = 0; i < samples.size(); ++i) { float t = static_cast<float>(i)/44100.0f; samples[i] = static_cast<std::int16_t>(32000.0f * sin(2*3.14159f*440.0f*t) * (1.0f-t*2.0f)); } success = soundBuffers["Spotted"].loadFromSamples(samples.data(), samples.size(), 1, 44100); if (!success) throw std::runtime_error("Failed to generate Spotted");
-    samples.assign(44100, 0); for (size_t i = 0; i < samples.size(); ++i) { float t = static_cast<float>(i)/44100.0f; float pulse = (sin(2*3.14159f*2.0f*t)+1.0f)/2.0f; samples[i] = static_cast<std::int16_t>(20000.0f * sin(2*3.14159f*300.0f*t) * pulse); } success = soundBuffers["LowHealth"].loadFromSamples(samples.data(), samples.size(), 1, 44100); if (!success) throw std::runtime_error("Failed to generate LowHealth");
-    samples.assign(44100/5, 0); for (size_t i=0; i < samples.size(); ++i) { float t = static_cast<float>(i)/44100.0f; samples[i] = static_cast<std::int16_t>(32000.0f * sin(2*3.14159f*900.0f*t) * exp(-t*20.0f)); } success = soundBuffers["sonar"].loadFromSamples(samples.data(), samples.size(), 1, 44100); if (!success) throw std::runtime_error("Failed to generate Sonar");
-    samples.assign(44100/30, 0);for (size_t i=0; i < samples.size(); ++i) { float t = static_cast<float>(i)/44100.0f; samples[i] = static_cast<std::int16_t>(18000.0f * sin(2*3.14159f*1200.0f*t) * exp(-t*80.0f)); } success = soundBuffers["sonar_echo"].loadFromSamples(samples.data(), samples.size(), 1, 44100); if (!success) throw std::runtime_error("Failed to generate sonar_echo");
-    samples.assign(44100/20, 0); for (size_t i=0; i < samples.size(); ++i) { float t = static_cast<float>(i)/44100.0f; samples[i] = static_cast<std::int16_t>(25000.0f*sin(2*3.14159f*880.0f*t)*exp(-t*50.0f)); } success = soundBuffers["HealthIndicator"].loadFromSamples(samples.data(), samples.size(), 1, 44100); if (!success) throw std::runtime_error("Failed to generate HealthIndicator");
-    samples.assign(44100/15, 0); for (size_t i=0; i < samples.size(); ++i) { float t = static_cast<float>(i)/44100.0f; samples[i] = static_cast<std::int16_t>(20000.0f*sin(2*3.14159f*600.0f*t)*exp(-t*40.0f)); } success = soundBuffers["MenuSelect"].loadFromSamples(samples.data(), samples.size(), 1, 44100); if(!success) throw std::runtime_error("Failed to generate MenuSelect");
-    samples.assign(44100/10, 0); for (size_t i=0; i < samples.size(); ++i) { float t = static_cast<float>(i)/44100.0f; samples[i] = static_cast<std::int16_t>(22000.0f*sin(2*3.14159f*440.0f*t)*exp(-t*30.0f)); } success = soundBuffers["MenuConfirm"].loadFromSamples(samples.data(), samples.size(), 1, 44100); if(!success) throw std::runtime_error("Failed to generate MenuConfirm");
-    samples.assign(44100/8, 0); for (size_t i=0; i < samples.size(); ++i) { float t = static_cast<float>(i)/44100.0f; float freq = 800.0f - sin(t * 3.14159f * 4.0f) * 400.0f; samples[i] = static_cast<std::int16_t>(28000.0f * sin(2*3.14159f*freq*t) * exp(-t*20.0f)); } success = soundBuffers["Stun"].loadFromSamples(samples.data(), samples.size(), 1, 44100); if(!success) throw std::runtime_error("Failed to generate Stun");
+    samples.assign(44100 / 10, 0); for (size_t i = 0; i < samples.size(); ++i) { float t = static_cast<float>(i)/44100.0f; samples[i] = static_cast<std::int16_t>(15000.0f * sin(2*3.14159f*600.0f*t) * exp(-t*30.0f)); } success = soundBuffers["DetectionTick"].loadFromSamples(samples.data(), samples.size(), 1, 44100, {sf::SoundChannel::Mono}); if (!success) throw std::runtime_error("Failed to generate DetectionTick");
+    samples.assign(44100 / 2, 0); for (size_t i = 0; i < samples.size(); ++i) { float t = static_cast<float>(i)/44100.0f; samples[i] = static_cast<std::int16_t>(32000.0f * sin(2*3.14159f*440.0f*t) * (1.0f-t*2.0f)); } success = soundBuffers["Spotted"].loadFromSamples(samples.data(), samples.size(), 1, 44100, {sf::SoundChannel::Mono}); if (!success) throw std::runtime_error("Failed to generate Spotted");
+    samples.assign(44100, 0); for (size_t i = 0; i < samples.size(); ++i) { float t = static_cast<float>(i)/44100.0f; float pulse = (sin(2*3.14159f*2.0f*t)+1.0f)/2.0f; samples[i] = static_cast<std::int16_t>(20000.0f * sin(2*3.14159f*300.0f*t) * pulse); } success = soundBuffers["LowHealth"].loadFromSamples(samples.data(), samples.size(), 1, 44100, {sf::SoundChannel::Mono}); if (!success) throw std::runtime_error("Failed to generate LowHealth");
+    samples.assign(44100/5, 0); for (size_t i=0; i < samples.size(); ++i) { float t = static_cast<float>(i)/44100.0f; samples[i] = static_cast<std::int16_t>(32000.0f * sin(2*3.14159f*900.0f*t) * exp(-t*20.0f)); } success = soundBuffers["sonar"].loadFromSamples(samples.data(), samples.size(), 1, 44100, {sf::SoundChannel::Mono}); if (!success) throw std::runtime_error("Failed to generate Sonar");
+    samples.assign(44100/30, 0);for (size_t i=0; i < samples.size(); ++i) { float t = static_cast<float>(i)/44100.0f; samples[i] = static_cast<std::int16_t>(18000.0f * sin(2*3.14159f*1200.0f*t) * exp(-t*80.0f)); } success = soundBuffers["sonar_echo"].loadFromSamples(samples.data(), samples.size(), 1, 44100, {sf::SoundChannel::Mono}); if (!success) throw std::runtime_error("Failed to generate sonar_echo");
+    samples.assign(44100/20, 0); for (size_t i=0; i < samples.size(); ++i) { float t = static_cast<float>(i)/44100.0f; samples[i] = static_cast<std::int16_t>(25000.0f*sin(2*3.14159f*880.0f*t)*exp(-t*50.0f)); } success = soundBuffers["HealthIndicator"].loadFromSamples(samples.data(), samples.size(), 1, 44100, {sf::SoundChannel::Mono}); if (!success) throw std::runtime_error("Failed to generate HealthIndicator");
+    samples.assign(44100/15, 0); for (size_t i=0; i < samples.size(); ++i) { float t = static_cast<float>(i)/44100.0f; samples[i] = static_cast<std::int16_t>(20000.0f*sin(2*3.14159f*600.0f*t)*exp(-t*40.0f)); } success = soundBuffers["MenuSelect"].loadFromSamples(samples.data(), samples.size(), 1, 44100, {sf::SoundChannel::Mono}); if(!success) throw std::runtime_error("Failed to generate MenuSelect");
+    samples.assign(44100/10, 0); for (size_t i=0; i < samples.size(); ++i) { float t = static_cast<float>(i)/44100.0f; samples[i] = static_cast<std::int16_t>(22000.0f*sin(2*3.14159f*440.0f*t)*exp(-t*30.0f)); } success = soundBuffers["MenuConfirm"].loadFromSamples(samples.data(), samples.size(), 1, 44100, {sf::SoundChannel::Mono}); if(!success) throw std::runtime_error("Failed to generate MenuConfirm");
+    samples.assign(44100/8, 0); for (size_t i=0; i < samples.size(); ++i) { float t = static_cast<float>(i)/44100.0f; float freq = 800.0f - sin(t * 3.14159f * 4.0f) * 400.0f; samples[i] = static_cast<std::int16_t>(28000.0f * sin(2*3.14159f*freq*t) * exp(-t*20.0f)); } success = soundBuffers["Stun"].loadFromSamples(samples.data(), samples.size(), 1, 44100, {sf::SoundChannel::Mono}); if(!success) throw std::runtime_error("Failed to generate Stun");
 }
 
 void SoundEngine::run() {
@@ -171,7 +171,7 @@ void SoundEngine::selectGameMode() {
                 window.close();
                 return;
             }
-            if (const auto* keyPressed = event->get<sf::Event::KeyPressed>()) {
+            if (const auto* keyPressed = event->getIf<sf::Event::KeyPressed>()) {
                 if (keyPressed->code == sf::Keyboard::Key::Up || keyPressed->code == sf::Keyboard::Key::Down) {
                     modeSelection = 1 - modeSelection;
                     float pitch = (modeSelection == 0) ? 1.0f : 1.2f;
@@ -254,7 +254,7 @@ void SoundEngine::processEvents() {
         if (event->is<sf::Event::Closed>()) {
             window.close();
         }
-        if (const auto* keyPressed = event->get<sf::Event::KeyPressed>()) {
+        if (const auto* keyPressed = event->getIf<sf::Event::KeyPressed>()) {
             if (gameState == GameState::Playing) {
                 switch (keyPressed->scancode) {
                     case sf::Keyboard::Scan::Numpad8: activateDirectionalSonar(8); break;
@@ -301,19 +301,19 @@ bool SoundEngine::processInput(float deltaTime) {
         if (len > 0) moveDir /= len;
         sf::Vector3f newPos = player->position + moveDir * speed * deltaTime;
         sf::FloatRect playerBounds({newPos.x - 0.4f, newPos.z - 0.4f}, {0.8f, 0.8f});
-        if (!std::any_of(walls.begin(), walls.end(), [&](const auto& wall){ return wall.intersects(playerBounds); })) {
+        if (!std::any_of(walls.begin(), walls.end(), [&](const auto& wall){ return wall.findIntersection(playerBounds); })) {
             player->setPosition(newPos);
         } else {
             sf::Vector3f oldPos = player->position;
             player->setPosition({newPos.x, oldPos.y, oldPos.z});
             playerBounds.position = {newPos.x - 0.4f, oldPos.z - 0.4f};
-            if (std::any_of(walls.begin(), walls.end(), [&](const auto& wall){ return wall.intersects(playerBounds); })) {
+            if (std::any_of(walls.begin(), walls.end(), [&](const auto& wall){ return wall.findIntersection(playerBounds); })) {
                 player->setPosition(oldPos);
             }
             oldPos = player->position;
             player->setPosition({oldPos.x, oldPos.y, newPos.z});
             playerBounds.position = {oldPos.x - 0.4f, newPos.z - 0.4f};
-            if (std::any_of(walls.begin(), walls.end(), [&](const auto& wall){ return wall.intersects(playerBounds); })) {
+            if (std::any_of(walls.begin(), walls.end(), [&](const auto& wall){ return wall.findIntersection(playerBounds); })) {
                 player->setPosition(oldPos);
             }
         }
@@ -340,7 +340,7 @@ void SoundEngine::generateLevel() {
         float z = getFloat(-settings.worldSize + h, settings.worldSize - h);
         sf::FloatRect newWall({x, z}, {w, h});
         sf::FloatRect playerStartArea({-2.f, -2.f}, {4.f, 4.f});
-        if (newWall.intersects(playerStartArea)) {
+        if (newWall.findIntersection(playerStartArea)) {
             i--;
             continue;
         }
