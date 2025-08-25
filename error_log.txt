@@ -1,0 +1,12 @@
+[2025-08-25 10:22:32] TEST_SETUP: Spawning one GUARD at a fixed position for taser test.
+[2025-08-25 10:35:01] TEST_SETUP: Spawning one GUARD at a fixed position for taser test.
+[2025-08-25 10:35:04] TEST_LOG: Automated test starting...
+[2025-08-25 10:35:04] TEST_LOG: Switched weapon to TASER.
+[2025-08-25 10:35:04] TEST_LOG: handlePlayerAttack() called.
+[2025-08-25 10:35:04] TEST_LOG: Firing taser at target, but out of range. Distance: 7.201967
+[2025-08-25 10:38:20] TEST_SETUP: Spawning one GUARD at a fixed position for taser test.
+[2025-08-25 10:38:23] TEST_LOG: Automated test starting...
+[2025-08-25 10:38:23] TEST_LOG: Switched weapon to TASER.
+[2025-08-25 10:38:23] TEST_LOG: handlePlayerAttack() called.
+[2025-08-25 10:38:23] TEST_LOG: Firing taser at target. Distance: 2.340142
+[2025-08-25 10:38:23] TEST_LOG: NPC has been stunned by a guaranteed stun source.

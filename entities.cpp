@@ -5,7 +5,7 @@
 #include <algorithm>
 #include <optional>
 
-bool Character::takeDamage(int damage, SoundEngine& engine, Character* attacker) {
+bool Character::takeDamage(int damage, SoundEngine& engine, Character* attacker, bool guaranteedStun) {
     if (!isAlive) return false;
     health -= damage;
     lastDamageTakenClock.restart();
@@ -15,6 +15,13 @@ bool Character::takeDamage(int damage, SoundEngine& engine, Character* attacker)
 
 Player::Player(const GameSettings& settings) { reset(settings); }
 void Player::update(float deltaTime, const GameSettings& settings) {
+    if (isStunned) {
+        if (stunClock.getElapsedTime().asSeconds() > 5.f) { // 5 second stun duration for player
+            isStunned = false;
+        } else {
+            return; // Can't do anything while stunned
+        }
+    }
     if (!isAlive) return;
     if (health < maxHealth && healthRegenDelayClock.getElapsedTime().asSeconds() > settings.healthRegenDelay) {
         healthRegenBuffer += settings.healthRegenRate * deltaTime;
@@ -27,8 +34,16 @@ void Player::update(float deltaTime, const GameSettings& settings) {
 }
 void Player::setPosition(const sf::Vector3f& newPos) { position = newPos; sf::Listener::setPosition(position); }
 void Player::switchWeapon(WeaponType newWeapon) { if (isAlive) currentWeapon = newWeapon; }
-bool Player::takeDamage(int damage, SoundEngine& engine, Character* attacker) {
+bool Player::takeDamage(int damage, SoundEngine& engine, Character* attacker, bool guaranteedStun) {
     if (godMode || lastDamageTakenClock.getElapsedTime().asSeconds() < 0.2f) return false;
+
+    if (guaranteedStun) {
+        isStunned = true;
+        stunClock.restart();
+        // We can reuse the NPC stun sound for the player for now
+        engine.playSound("Stun", {0,0,0}, 100.f, true);
+    }
+
     healthRegenDelayClock.restart();
     healthRegenBuffer = 0.0f;
     engine.playSound("player_hit", {0,0,0}, 100.f, true);
@@ -241,11 +256,19 @@ void NPC::updateCombat(float deltaTime, Player& player, SoundEngine& engine, con
             }
         }
 
-        if (distanceToPlayer < rangedAttackRange && lastAttackClock.getElapsedTime().asSeconds() > rangedCooldown) {
-            lastAttackClock.restart();
-            engine.playSound("pistol", position);
-            if (getInt(1, 100) <= 60) {
-                player.takeDamage(settings.pistolDamage, engine, this);
+        if (weapon == WeaponType::TASER) {
+            if (distanceToPlayer < settings.taserRange && lastAttackClock.getElapsedTime().asSeconds() > settings.taserCooldown) {
+                lastAttackClock.restart();
+                engine.playSound("sniper", position); // Placeholder sound
+                player.takeDamage(0, engine, this, true); // 0 damage, guaranteed stun
+            }
+        } else { // For other ranged weapons like PISTOL
+            if (distanceToPlayer < rangedAttackRange && lastAttackClock.getElapsedTime().asSeconds() > rangedCooldown) {
+                lastAttackClock.restart();
+                engine.playSound("pistol", position);
+                if (getInt(1, 100) <= 60) {
+                    player.takeDamage(settings.pistolDamage, engine, this);
+                }
             }
         }
     }
@@ -260,11 +283,20 @@ void NPC::respawn(sf::Vector3f newPosition, const GameSettings& settings) {
     isStunned = false;
     walkSpeed = settings.npcWalkSpeed; runSpeed = settings.npcRunSpeed; isWaiting = false;
 
-    if (getInt(0, 1) == 0) {
+    if (type == NPCType::REGULAR) {
         weapon = WeaponType::FIST;
         behavior = AIBehavior::AGGRESSOR;
         maxHealth = settings.regularHealth;
-    } else {
+    } else if (type == NPCType::GUARD) {
+        // Guards can have a pistol or a taser
+        if (getInt(0, 1) == 0) {
+            weapon = WeaponType::PISTOL;
+        } else {
+            weapon = WeaponType::TASER;
+        }
+        behavior = AIBehavior::SUPPORT; // Both are ranged, so support seems appropriate
+        maxHealth = settings.shooterHealth; // Use shooter health for guards
+    } else { // Fallback for other types like SHOOTER or BOSS for now
         weapon = WeaponType::PISTOL;
         behavior = AIBehavior::SUPPORT;
         maxHealth = settings.shooterHealth;
@@ -274,7 +306,7 @@ void NPC::respawn(sf::Vector3f newPosition, const GameSettings& settings) {
     setNewRandomTarget(settings); decisionClock.restart();
 }
 
-bool NPC::takeDamage(int damage, SoundEngine& engine, Character* attacker) {
+bool NPC::takeDamage(int damage, SoundEngine& engine, Character* attacker, bool guaranteedStun) {
     if (!isAlive || isStunned) return false;
 
     engine.playSound("hit", position);
@@ -283,10 +315,14 @@ bool NPC::takeDamage(int damage, SoundEngine& engine, Character* attacker) {
     float pitch = 0.7f + healthPercentage * 0.6f;
     engine.playSound("HealthIndicator", position, 80.f, false, pitch);
 
-    bool result = Character::takeDamage(damage, engine, attacker);
+    bool result = Character::takeDamage(damage, engine, attacker, guaranteedStun);
 
     if (result && isAlive) {
-        if (getInt(1, 100) <= engine.getSettings().npcStunChanceOnDamage) {
+        if (guaranteedStun) {
+            isStunned = true;
+            stunClock.restart();
+            engine.playSound("Stun", position, 100.f);
+        } else if (getInt(1, 100) <= engine.getSettings().npcStunChanceOnDamage) {
             isStunned = true;
             stunClock.restart();
             engine.playSound("Stun", position, 100.f);

@@ -25,7 +25,7 @@ public:
 
     virtual ~Character() = default;
 
-    virtual bool takeDamage(int damage, SoundEngine& engine, Character* attacker = nullptr);
+    virtual bool takeDamage(int damage, SoundEngine& engine, Character* attacker = nullptr, bool guaranteedStun = false);
 };
 
 class Player : public Character {
@@ -40,9 +40,11 @@ public:
     bool isRunning = false;
     bool godMode = false;
     bool isCrouching = false;
+    bool isStunned = false;
     WeaponType currentWeapon = WeaponType::FIST;
 
 private:
+    sf::Clock stunClock;
     float healthRegenBuffer = 0.0f;
     sf::Clock healthRegenDelayClock;
 
@@ -52,7 +54,7 @@ public:
     void setPosition(const sf::Vector3f& newPos);
     void switchWeapon(WeaponType newWeapon);
     void reset(const GameSettings& settings);
-    bool takeDamage(int damage, SoundEngine& engine, Character* attacker = nullptr) override;
+    bool takeDamage(int damage, SoundEngine& engine, Character* attacker = nullptr, bool guaranteedStun = false) override;
     void toggleCrouch();
     bool isRegenOnCooldown(const GameSettings& settings) const;
 };
@@ -84,8 +86,9 @@ private:
 
     void setNewRandomTarget(const GameSettings& settings);
     void move(sf::Vector3f direction, float speed, float deltaTime, const std::vector<sf::FloatRect>& walls);
-    bool hasLineOfSight(const sf::Vector3f& target, const std::vector<sf::FloatRect>& walls);
     void updatePatrolling(float deltaTime, SoundEngine& engine, const std::vector<sf::FloatRect>& walls);
+public:
+    bool hasLineOfSight(const sf::Vector3f& target, const std::vector<sf::FloatRect>& walls);
     void updateAlert(float deltaTime, SoundEngine& engine, const std::vector<sf::FloatRect>& walls);
     void updateCombat(float deltaTime, Player& player, SoundEngine& engine, const GameSettings& settings, const std::vector<sf::FloatRect>& walls, const std::vector<std::unique_ptr<NPC>>& allNpcs);
 
@@ -96,5 +99,5 @@ public:
     void respawn(sf::Vector3f newPosition, const GameSettings& settings);
     void onDeath(SoundEngine& engine);
     void investigate(sf::Vector3f pos);
-    bool takeDamage(int damage, SoundEngine& engine, Character* attacker) override;
+    bool takeDamage(int damage, SoundEngine& engine, Character* attacker, bool guaranteedStun = false) override;
 };

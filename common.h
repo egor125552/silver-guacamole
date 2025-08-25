@@ -2,8 +2,8 @@
 #include <SFML/Graphics.hpp>
 
 enum class GameMode { CLASSIC_ACTION, STEALTH_MODE };
-enum class WeaponType { FIST, PISTOL, AUTOMATIC, SNIPER };
-enum class NPCType { REGULAR, SHOOTER, BOSS };
+enum class WeaponType { FIST, PISTOL, TASER, AUTOMATIC, SNIPER };
+enum class NPCType { REGULAR, SHOOTER, GUARD, BOSS };
 
 struct GameSettings {
     int playerHealth = 250;
@@ -31,4 +31,10 @@ struct GameSettings {
     int wallCount = 25;
     float gracePeriod = 5.0f;
     float respawnTime = 30.0f;
+
+    // Taser settings
+    int taserDamage = 0;
+    float taserCooldown = 3.0f;
+    float taserRange = 5.0f;
+    float taserVolume = 110.0f;
 };

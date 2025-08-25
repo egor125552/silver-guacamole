@@ -42,24 +42,34 @@ SoundEngine::SoundEngine()
 {
     setupConsole();
     loadSettings();
-    loadSounds();
-    generateSounds();
+
+    try {
+        loadSounds();
+        generateSounds();
+        playerDeathSound.setBuffer(soundBuffers.at("player_death"));
+        playerDeathSound.setRelativeToListener(true);
+        sonarSound.setBuffer(soundBuffers.at("sonar"));
+        lowHealthSound.setBuffer(soundBuffers.at("LowHealth"));
+        lowHealthSound.setRelativeToListener(true);
+        lowHealthSound.setLooping(true); // SFML 3.0
+        lowHealthSound.setVolume(80);
+        detectionTickSound.setBuffer(soundBuffers.at("DetectionTick"));
+        detectionTickSound.setRelativeToListener(true);
+    } catch (const std::exception& e) {
+        logError("AUDIO_ERROR: Failed to initialize sounds. Game will run without audio. Error: " + std::string(e.what()));
+        // Clear buffers so we don't try to use them
+        soundBuffers.clear();
+    }
+
     player = std::make_unique<Player>(settings);
     soundPool.reserve(SOUND_POOL_SIZE);
     for (size_t i = 0; i < SOUND_POOL_SIZE; ++i) {
         soundPool.emplace_back(dummyBuffer);
     }
-    playerDeathSound.setBuffer(soundBuffers.at("player_death"));
-    playerDeathSound.setRelativeToListener(true);
-    sonarSound.setBuffer(soundBuffers.at("sonar"));
-    lowHealthSound.setBuffer(soundBuffers.at("LowHealth"));
-    lowHealthSound.setRelativeToListener(true);
-    lowHealthSound.setLooping(true); // SFML 3.0
-    lowHealthSound.setVolume(80);
-    detectionTickSound.setBuffer(soundBuffers.at("DetectionTick"));
-    detectionTickSound.setRelativeToListener(true);
+
     weapons[WeaponType::FIST]      = {settings.fistDamage, 0.5f, "punch", false, settings.fistVolume};
     weapons[WeaponType::PISTOL]    = {settings.pistolDamage, 0.4f, "pistol", false, settings.pistolVolume};
+    weapons[WeaponType::TASER]     = {settings.taserDamage, settings.taserCooldown, "sniper", false, settings.taserVolume}; // Placeholder sound
 }
 
 SoundEngine::~SoundEngine() = default;
@@ -135,8 +145,9 @@ void SoundEngine::generateSounds() {
 
 void SoundEngine::run() {
     window.setVerticalSyncEnabled(true);
+    resetGame(); // Initialize the game state and level
+
     while (window.isOpen()) {
-        if (gameState == GameState::SelectingMode) { selectGameMode(); continue; }
         float deltaTime = deltaClock.restart().asSeconds();
         if (deltaTime > 0.1f) deltaTime = 0.1f;
         processEvents();
@@ -157,36 +168,11 @@ void SoundEngine::run() {
                 lowHealthSound.stop(); detectionTickSound.stop();
             }
         }
+        render();
         sf::sleep(sf::milliseconds(1));
     }
 }
 
-// ВЕРСИЯ ДЛЯ SFML 3.0
-void SoundEngine::selectGameMode() {
-    int menuState = 0, modeSelection = 0;
-    playSound("MenuSelect", {0,0,0}, 100.f, true, 1.0f);
-    while(window.isOpen() && menuState < 1) {
-        while (auto event = window.pollEvent()) {
-            if (event->is<sf::Event::Closed>()) {
-                window.close();
-                return;
-            }
-            if (const auto* keyPressed = event->getIf<sf::Event::KeyPressed>()) {
-                if (keyPressed->code == sf::Keyboard::Key::Up || keyPressed->code == sf::Keyboard::Key::Down) {
-                    modeSelection = 1 - modeSelection;
-                    float pitch = (modeSelection == 0) ? 1.0f : 1.2f;
-                    playSound("MenuSelect", {0,0,0}, 100.f, true, pitch);
-                } else if (keyPressed->code == sf::Keyboard::Key::Enter) {
-                    gameMode = (modeSelection == 0) ? GameMode::CLASSIC_ACTION : GameMode::STEALTH_MODE;
-                    playSound("MenuConfirm", {0,0,0}, 100.f, true, 1.5f);
-                    menuState = 1;
-                }
-            }
-        }
-        sf::sleep(sf::milliseconds(10));
-    }
-    if(window.isOpen()) resetGame();
-}
 
 void SoundEngine::activateDirectionalSonar(int numpadKey) {
     if (sonarClock.getElapsedTime().asSeconds() < 0.5f) return;
@@ -272,6 +258,7 @@ void SoundEngine::processEvents() {
                     case sf::Keyboard::Key::LControl: player->toggleCrouch(); break;
                     case sf::Keyboard::Key::Num1: player->switchWeapon(WeaponType::FIST); break;
                     case sf::Keyboard::Key::Num2: player->switchWeapon(WeaponType::PISTOL); break;
+                    case sf::Keyboard::Key::Num3: player->switchWeapon(WeaponType::TASER); break;
                     case sf::Keyboard::Key::Space: handlePlayerAttack(); break;
                     case sf::Keyboard::Key::E: activateSonar(); break;
                     case sf::Keyboard::Key::G: player->godMode = !player->godMode; playSound("punch", {0,0,0}, 100.f, true); break;
@@ -286,7 +273,7 @@ void SoundEngine::processEvents() {
 
 // ВЕРСИЯ ДЛЯ SFML 3.0
 bool SoundEngine::processInput(float deltaTime) {
-    if (!player->isAlive) return false;
+    if (!player->isAlive || player->isStunned) return false;
     player->isRunning = sf::Keyboard::isKeyPressed(sf::Keyboard::Scan::LShift) || sf::Keyboard::isKeyPressed(sf::Keyboard::Scan::RShift);
     if (player->isCrouching) player->isRunning = false;
     float speed = player->isCrouching ? Player::CROUCH_SPEED : (player->isRunning ? player->runSpeed : Player::WALK_SPEED);
@@ -356,7 +343,9 @@ void SoundEngine::resetGame() {
     sf::Listener::setDirection({0.f, 0.f, -1.f});
     npcs.clear();
     for (int i=0; i < INITIAL_NPC_COUNT; ++i) {
-        npcs.push_back(std::make_unique<NPC>(sf::Vector3f(), NPCType::REGULAR, settings));
+        // Make every 4th NPC a guard, the rest are regular prisoners
+        NPCType type = (i % 4 == 0) ? NPCType::GUARD : NPCType::REGULAR;
+        npcs.push_back(std::make_unique<NPC>(sf::Vector3f(), type, settings));
     }
     for (auto& npc : npcs) {
         sf::Vector3f pos;
@@ -371,6 +360,22 @@ void SoundEngine::resetGame() {
 void SoundEngine::handleNpcActions(float deltaTime) {
     for (auto& npc_to_update : npcs) {
         if (npc_to_update->isAlive) {
+            // --- React to dead bodies ---
+            if (npc_to_update->state != AIState::COMBAT && !npc_to_update->hasReactedToDeath) {
+                for (const auto& other_npc : npcs) {
+                    if (!other_npc->isAlive) { // If the other NPC is dead
+                        float distance = std::hypot(npc_to_update->position.x - other_npc->position.x, npc_to_update->position.z - other_npc->position.z);
+                        // Check if dead body is nearby and visible
+                        if (distance < 15.f && npc_to_update->hasLineOfSight(other_npc->position, walls)) {
+                            playSound("reaction_panic", npc_to_update->position, 100.f);
+                            npc_to_update->investigate(other_npc->position);
+                            npc_to_update->hasReactedToDeath = true; // So they only panic once
+                            break;
+                        }
+                    }
+                }
+            }
+
             bool inGracePeriod = gameClock.getElapsedTime().asSeconds() < settings.gracePeriod;
             GameMode currentMode = gameMode;
             if (inGracePeriod && gameMode == GameMode::CLASSIC_ACTION) {
@@ -404,7 +409,8 @@ void SoundEngine::handlePlayerAttack() {
     const auto& weapon = weapons.at(player->currentWeapon);
     if (player->lastAttackClock.getElapsedTime().asSeconds() < weapon.cooldown) return;
     player->lastAttackClock.restart();
-    playSound(weapon.soundName, {0,0,0}, weapon.volume, true);
+
+    // Find the best target first
     NPC* bestTarget = nullptr;
     float minDistance = std::numeric_limits<float>::max();
     for(auto& npc : npcs) {
@@ -416,8 +422,15 @@ void SoundEngine::handlePlayerAttack() {
             }
         }
     }
+
+    playSound(weapon.soundName, {0,0,0}, weapon.volume, true);
+
     if (bestTarget) {
-        if ((player->currentWeapon == WeaponType::FIST && minDistance < 1.8f) || player->currentWeapon != WeaponType::FIST) {
+        if (player->currentWeapon == WeaponType::TASER) {
+            if (minDistance < settings.taserRange) {
+                bestTarget->takeDamage(0, *this, player.get(), true); // 0 damage, guaranteed stun
+            }
+        } else if ((player->currentWeapon == WeaponType::FIST && minDistance < 1.8f) || player->currentWeapon == WeaponType::PISTOL) {
             bestTarget->takeDamage(weapon.playerDamage, *this, player.get());
             if (!bestTarget->isAlive) bestTarget->onDeath(*this);
         } else if (player->currentWeapon == WeaponType::FIST) {
@@ -493,7 +506,7 @@ void SoundEngine::onNpcSpottedPlayer(NPC* spottedBy, bool forceCombat) {
     if (spottedBy->state == AIState::COMBAT) return;
     spottedBy->state = AIState::COMBAT;
     spottedBy->detectionLevel = 0;
-    playSound("Spotted", spottedBy->position);
+    playSound("battle_cry", spottedBy->position, 100.f, false, getFloat(0.9f, 1.1f));
     detectionTickSound.stop();
 }
 
@@ -516,6 +529,52 @@ void SoundEngine::playSound(const std::string& name, sf::Vector3f position, floa
     sound.setPitch((pitch == -1.f) ? getFloat(0.95f, 1.05f) : pitch);
     sound.play();
     currentSoundIndex = (currentSoundIndex + 1) % SOUND_POOL_SIZE;
+}
+
+void SoundEngine::render() {
+    window.clear(sf::Color(10, 10, 20)); // Dark blue background
+
+    // --- Create a 2D view centered on the player ---
+    sf::View view;
+    view.setCenter({player->position.x, player->position.z});
+    view.setSize({80.f, 60.f}); // Zoom level
+    window.setView(view);
+
+    // --- Draw Walls ---
+    sf::RectangleShape wallShape;
+    wallShape.setFillColor(sf::Color(100, 120, 140));
+    for (const auto& wallRect : walls) {
+        wallShape.setPosition({wallRect.position.x, wallRect.position.y});
+        wallShape.setSize(wallRect.size);
+        window.draw(wallShape);
+    }
+
+    // --- Draw NPCs ---
+    sf::CircleShape npcShape(0.4f);
+    for (const auto& npc : npcs) {
+        if (npc->isAlive) {
+            npcShape.setPosition({npc->position.x - 0.4f, npc->position.z - 0.4f});
+            if (npc->state == AIState::COMBAT) {
+                npcShape.setFillColor(sf::Color::Red);
+            } else if (npc->state == AIState::ALERT) {
+                npcShape.setFillColor(sf::Color::Yellow);
+            } else {
+                npcShape.setFillColor(sf::Color(200, 200, 200));
+            }
+            window.draw(npcShape);
+        }
+    }
+
+    // --- Draw Player ---
+    sf::CircleShape playerShape(0.4f);
+    playerShape.setPosition({player->position.x - 0.4f, player->position.z - 0.4f});
+    playerShape.setFillColor(sf::Color::Green);
+    if (!player->isAlive) {
+        playerShape.setFillColor(sf::Color(100, 100, 100));
+    }
+    window.draw(playerShape);
+
+    window.display();
 }
 
 void SoundEngine::setupConsole() {

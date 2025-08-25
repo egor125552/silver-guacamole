@@ -51,8 +51,8 @@ public:
 private:
     // --- Основные компоненты ---
     sf::RenderWindow window;
-    GameState gameState = GameState::SelectingMode;
-    GameMode gameMode = GameMode::CLASSIC_ACTION;
+    GameState gameState = GameState::Playing; // Start directly in the game
+    GameMode gameMode = GameMode::CLASSIC_ACTION; // Use a single, unified mode
     GameSettings settings;
     sf::Clock deltaClock;
     sf::Clock gameClock;
@@ -61,7 +61,7 @@ private:
     std::unique_ptr<Player> player;
     std::vector<std::unique_ptr<NPC>> npcs;
     std::vector<sf::FloatRect> walls;
-    static constexpr int INITIAL_NPC_COUNT = 5;
+    static constexpr int INITIAL_NPC_COUNT = 20;
 
     // --- Оружие ---
     std::map<WeaponType, Weapon> weapons;
@@ -93,10 +93,10 @@ private:
     void processEvents();
     bool processInput(float deltaTime);
     void update(float deltaTime);
+    void render();
     
     // --- Управление состоянием игры ---
     void resetGame();
-    void selectGameMode();
     void generateLevel();
 
     // --- Игровые механики ---
