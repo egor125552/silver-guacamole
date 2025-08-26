@@ -1,4 +1,29 @@
 #include "SoundEngine.h"
+
+// --- EFX Function Pointers ---
+LPALGENEFFECTS alGenEffects = nullptr;
+LPALDELETEEFFECTS alDeleteEffects = nullptr;
+LPALISEFFECT alIsEffect = nullptr;
+LPALEFFECTI alEffecti = nullptr;
+LPALEFFECTIV alEffectiv = nullptr;
+LPALEFFECTF alEffectf = nullptr;
+LPALEFFECTFV alEffectfv = nullptr;
+LPALGETEFFECTI alGetEffecti = nullptr;
+LPALGETEFFECTIV alGetEffectiv = nullptr;
+LPALGETEFFECTF alGetEffectf = nullptr;
+LPALGETEFFECTFV alGetEffectfv = nullptr;
+LPALGENAUXILIARYEFFECTSLOTS alGenAuxiliaryEffectSlots = nullptr;
+LPALDELETEAUXILIARYEFFECTSLOTS alDeleteAuxiliaryEffectSlots = nullptr;
+LPALISAUXILIARYEFFECTSLOT alIsAuxiliaryEffectSlot = nullptr;
+LPALAUXILIARYEFFECTSLOTI alAuxiliaryEffectSloti = nullptr;
+LPALAUXILIARYEFFECTSLOTIV alAuxiliaryEffectSlotiv = nullptr;
+LPALAUXILIARYEFFECTSLOTF alAuxiliaryEffectSlotf = nullptr;
+LPALAUXILIARYEFFECTSLOTFV alAuxiliaryEffectSlotfv = nullptr;
+LPALGETAUXILIARYEFFECTSLOTI alGetAuxiliaryEffectSloti = nullptr;
+LPALGETAUXILIARYEFFECTSLOTIV alGetAuxiliaryEffectSlotiv = nullptr;
+LPALGETAUXILIARYEFFECTSLOTF alGetAuxiliaryEffectSlotf = nullptr;
+LPALGETAUXILIARYEFFECTSLOTFV alGetAuxiliaryEffectSlotfv = nullptr;
+
 #include "Player.h"
 #include "Enemy.h"
 #include "utils.h"
@@ -60,6 +85,8 @@ SoundEngine::SoundEngine()
     logError("DEBUG_LOG: Settings loaded.");
 
     try {
+        InitOpenAL(); // Инициализируем OpenAL
+
         audioInitialized = true;
         logError("DEBUG_LOG: Loading sounds...");
         loadSounds();
@@ -93,12 +120,6 @@ SoundEngine::SoundEngine()
     player = std::make_unique<Player>(settings);
     logError("DEBUG_LOG: Player created.");
 
-    soundPool.reserve(SOUND_POOL_SIZE);
-    for (size_t i = 0; i < SOUND_POOL_SIZE; ++i) {
-        soundPool.emplace_back(dummyBuffer);
-    }
-    logError("DEBUG_LOG: Sound pool created.");
-
     // Weapon definitions
     weapons[WeaponType::FIST]      = {settings.fistDamage, 0.5f, "punch", false, settings.fistVolume};
     weapons[WeaponType::PISTOL]    = {settings.pistolDamage, 0.4f, "pistol", false, settings.pistolVolume};
@@ -116,7 +137,109 @@ SoundEngine::SoundEngine()
     logError("DEBUG_LOG: Constructor end.");
 }
 
-SoundEngine::~SoundEngine() = default;
+SoundEngine::~SoundEngine() {
+    ShutdownOpenAL();
+}
+
+void SoundEngine::InitOpenAL() {
+    openalDevice = alcOpenDevice(nullptr);
+    if (!openalDevice) {
+        throw std::runtime_error("Failed to open OpenAL device");
+    }
+
+    openalContext = alcCreateContext(openalDevice, nullptr);
+    if (!openalContext) {
+        alcCloseDevice(openalDevice);
+        throw std::runtime_error("Failed to create OpenAL context");
+    }
+
+    if (!alcMakeContextCurrent(openalContext)) {
+        alcDestroyContext(openalContext);
+        alcCloseDevice(openalDevice);
+        throw std::runtime_error("Failed to make OpenAL context current");
+    }
+
+    // Загружаем функции EFX
+    alGenEffects = (LPALGENEFFECTS)alGetProcAddress("alGenEffects");
+    alDeleteEffects = (LPALDELETEEFFECTS)alGetProcAddress("alDeleteEffects");
+    alEffecti = (LPALEFFECTI)alGetProcAddress("alEffecti");
+    alEffectf = (LPALEFFECTF)alGetProcAddress("alEffectf");
+    alGenAuxiliaryEffectSlots = (LPALGENAUXILIARYEFFECTSLOTS)alGetProcAddress("alGenAuxiliaryEffectSlots");
+    alDeleteAuxiliaryEffectSlots = (LPALDELETEAUXILIARYEFFECTSLOTS)alGetProcAddress("alDeleteAuxiliaryEffectSlots");
+    alAuxiliaryEffectSloti = (LPALAUXILIARYEFFECTSLOTI)alGetProcAddress("alAuxiliaryEffectSloti");
+
+    if (!alGenEffects || !alDeleteEffects || !alEffecti || !alEffectf || !alGenAuxiliaryEffectSlots || !alDeleteAuxiliaryEffectSlots || !alAuxiliaryEffectSloti) {
+        throw std::runtime_error("Failed to load EFX functions");
+    }
+
+    // Создаем эффект реверберации
+    alGenEffects(1, &reverbEffect);
+    if (alGetError() != AL_NO_ERROR) {
+        throw std::runtime_error("Failed to generate EFX effect");
+    }
+    alEffecti(reverbEffect, AL_EFFECT_TYPE, AL_EFFECT_REVERB);
+
+    // Используем пресет STONEROOM
+    alEffectf(reverbEffect, AL_REVERB_DENSITY, 1.0000f);
+    alEffectf(reverbEffect, AL_REVERB_DIFFUSION, 1.0000f);
+    alEffectf(reverbEffect, AL_REVERB_GAIN, 0.3162f);
+    alEffectf(reverbEffect, AL_REVERB_GAINHF, 0.7079f);
+    alEffectf(reverbEffect, AL_REVERB_DECAY_TIME, 2.3100f);
+    alEffectf(reverbEffect, AL_REVERB_DECAY_HFRATIO, 0.6400f);
+    alEffectf(reverbEffect, AL_REVERB_REFLECTIONS_GAIN, 0.4411f);
+    alEffectf(reverbEffect, AL_REVERB_REFLECTIONS_DELAY, 0.0120f);
+    alEffectf(reverbEffect, AL_REVERB_LATE_REVERB_GAIN, 1.1003f);
+    alEffectf(reverbEffect, AL_REVERB_LATE_REVERB_DELAY, 0.0170f);
+    alEffectf(reverbEffect, AL_REVERB_AIR_ABSORPTION_GAINHF, 0.9943f);
+    alEffectf(reverbEffect, AL_REVERB_ROOM_ROLLOFF_FACTOR, 0.0f);
+    alEffecti(reverbEffect, AL_REVERB_DECAY_HFLIMIT, AL_TRUE);
+
+    // Создаем слот для эффекта
+    alGenAuxiliaryEffectSlots(1, &effectSlot);
+    if (alGetError() != AL_NO_ERROR) {
+        throw std::runtime_error("Failed to generate EFX slot");
+    }
+
+    // Привязываем эффект к слоту
+    alAuxiliaryEffectSloti(effectSlot, AL_EFFECTSLOT_EFFECT, reverbEffect);
+    if (alGetError() != AL_NO_ERROR) {
+        throw std::runtime_error("Failed to bind effect to slot");
+    }
+
+    // Создаем пул источников звука
+    soundSources.resize(SOUND_POOL_SIZE);
+    alGenSources(SOUND_POOL_SIZE, soundSources.data());
+    if (alGetError() != AL_NO_ERROR) {
+        throw std::runtime_error("Failed to generate OpenAL sources");
+    }
+    logError("DEBUG_LOG: OpenAL initialized successfully.");
+}
+
+void SoundEngine::ShutdownOpenAL() {
+    if (openalContext) {
+        // Stop all sources
+        alSourceStopv(soundSources.size(), soundSources.data());
+
+        // Delete sources and buffers
+        alDeleteSources(soundSources.size(), soundSources.data());
+        std::vector<ALuint> buffersToDelete;
+        for(auto const& [name, buffer] : openalBuffers) {
+            buffersToDelete.push_back(buffer);
+        }
+        alDeleteBuffers(buffersToDelete.size(), buffersToDelete.data());
+        openalBuffers.clear();
+
+        alDeleteAuxiliaryEffectSlots(1, &effectSlot);
+        alDeleteEffects(1, &reverbEffect);
+
+        alcMakeContextCurrent(nullptr);
+        alcDestroyContext(openalContext);
+    }
+    if (openalDevice) {
+        alcCloseDevice(openalDevice);
+    }
+    logError("DEBUG_LOG: OpenAL shut down.");
+}
 
 void SoundEngine::loadSettings() {
     std::ifstream file("config.ini");
@@ -203,12 +326,21 @@ void SoundEngine::loadSounds() {
         const std::string& name = pair.first;
         const std::string& category = pair.second;
         std::string path = "sounds/" + category + "/" + name + ".ogg";
-        if (!soundBuffers[name].loadFromFile(path)) {
+        bool loaded = soundBuffers[name].loadFromFile(path);
+        if (!loaded) {
             // Fallback to root sounds directory for compatibility
             std::string fallbackPath = "sounds/" + name + ".ogg";
-            if (!soundBuffers[name].loadFromFile(fallbackPath)) {
-                 throw std::runtime_error("Не удалось загрузить звук: " + path + " или " + fallbackPath);
-            }
+            loaded = soundBuffers[name].loadFromFile(fallbackPath);
+        }
+
+        if (loaded) {
+            ALuint buffer;
+            alGenBuffers(1, &buffer);
+            ALenum format = (soundBuffers[name].getChannelCount() == 1) ? AL_FORMAT_MONO16 : AL_FORMAT_STEREO16;
+            alBufferData(buffer, format, soundBuffers[name].getSamples(), soundBuffers[name].getSampleCount() * sizeof(std::int16_t), soundBuffers[name].getSampleRate());
+            openalBuffers[name] = buffer;
+        } else {
+            throw std::runtime_error("Не удалось загрузить звук: " + path);
         }
     }
 }
@@ -242,6 +374,18 @@ void SoundEngine::generateSounds() {
     // --- New Ambiance Sounds ---
     // Shadow Ambiance (subtle rustle/wind)
     samples.assign(44100, 0); for (size_t i = 0; i < samples.size(); ++i) { samples[i] = static_cast<std::int16_t>((static_cast<float>(rand()) / RAND_MAX - 0.5f) * 4000.0f); } success = soundBuffers["Shadow_Ambience"].loadFromSamples(samples.data(), samples.size(), 1, 44100, {sf::SoundChannel::Mono}); if (!success) throw std::runtime_error("Failed to generate Shadow_Ambience");
+
+    // --- Create OpenAL buffers for all generated sounds ---
+    for (auto const& [name, sbuffer] : soundBuffers) {
+        // Only generate for sounds that are not yet in openalBuffers map
+        if (openalBuffers.find(name) == openalBuffers.end()) {
+            ALuint buffer;
+            alGenBuffers(1, &buffer);
+            ALenum format = (sbuffer.getChannelCount() == 1) ? AL_FORMAT_MONO16 : AL_FORMAT_STEREO16;
+            alBufferData(buffer, format, sbuffer.getSamples(), sbuffer.getSampleCount() * sizeof(std::int16_t), sbuffer.getSampleRate());
+            openalBuffers[name] = buffer;
+        }
+    }
 }
 
 void SoundEngine::run() {
@@ -441,7 +585,8 @@ void SoundEngine::update(float deltaTime) {
     updateShadowSound();
     if (gameMode == GameMode::CLASSIC_ACTION) { updateProximitySonar(); }
     if (!player->isAlive && gameState == GameState::Playing) {
-        gameState = GameState::PlayerDying; playerDeathSound.play();
+        gameState = GameState::PlayerDying;
+        playSound("player_death", {0,0,0}, 100.f, true);
     }
 }
 
@@ -671,11 +816,9 @@ void SoundEngine::updateProximitySonar() {
     float distanceFactor = 1.0f - (minDistance / 50.0f);
     float delay = 1.5f * (1.0f - distanceFactor * 0.95f);
     if (proximitySonarClock.getElapsedTime().asSeconds() > delay) {
-        sonarSound.setRelativeToListener(true);
-        sonarSound.setPosition({0,0,0});
-        sonarSound.setPitch(1.0f + distanceFactor * 1.5f);
-        sonarSound.setVolume(20.0f + distanceFactor * 80.0f);
-        sonarSound.play();
+        float volume = 20.0f + distanceFactor * 80.0f;
+        float pitch = 1.0f + distanceFactor * 1.5f;
+        playSound("sonar", {0,0,0}, volume, true, pitch);
         proximitySonarClock.restart();
     }
 }
@@ -712,20 +855,53 @@ void SoundEngine::onEnemyDied(Enemy* deadEnemy) {
 
 void SoundEngine::playSound(const std::string& name, sf::Vector3f position, float volume, bool isListenerRelative, float pitch) {
     if (!audioInitialized) return;
-    if (soundBuffers.find(name) == soundBuffers.end()) return;
-    sf::Sound& sound = soundPool[currentSoundIndex];
-    sound.stop();
-    sound.setBuffer(soundBuffers.at(name));
-    sound.setRelativeToListener(isListenerRelative);
-    sound.setPosition(isListenerRelative ? sf::Vector3f(0,0,0) : position);
-    sound.setVolume(volume);
-    if (!isListenerRelative) {
-        sound.setMinDistance(4.0f);
-        sound.setAttenuation(1.5f);
+    auto it = soundBuffers.find(name);
+    if (it == soundBuffers.end() || it->second.getSampleCount() == 0) {
+        logError("Attempted to play sound that is not loaded or is empty: " + name);
+        return;
     }
-    sound.setPitch((pitch == -1.f) ? getFloat(0.95f, 1.05f) : pitch);
-    sound.play();
-    currentSoundIndex = (currentSoundIndex + 1) % SOUND_POOL_SIZE;
+
+    ALuint source = soundSources[currentSourceIndex];
+
+    // Останавливаем источник, если он еще играет
+    alSourceStop(source);
+
+    // Отсоединяем предыдущий буфер
+    alSourcei(source, AL_BUFFER, 0);
+
+    // Устанавливаем свойства
+    alSourcei(source, AL_BUFFER, openalBuffers.at(name));
+    alSourcef(source, AL_PITCH, (pitch == -1.f) ? getFloat(0.95f, 1.05f) : pitch);
+    alSourcef(source, AL_GAIN, volume / 100.f); // Громкость в OpenAL от 0.0 до 1.0
+    alSourcei(source, AL_SOURCE_RELATIVE, isListenerRelative ? AL_TRUE : AL_FALSE);
+
+    if (isListenerRelative) {
+        alSource3f(source, AL_POSITION, 0, 0, 0);
+        // Отключаем реверберацию для звуков интерфейса
+        alSource3i(source, AL_AUXILIARY_SEND_FILTER, AL_EFFECTSLOT_NULL, 0, AL_FILTER_NULL);
+    } else {
+        alSource3f(source, AL_POSITION, position.x, position.y, position.z);
+        alSourcef(source, AL_REFERENCE_DISTANCE, 4.0f); // Аналог setMinDistance
+        alSourcef(source, AL_ROLLOFF_FACTOR, 1.5f);     // Аналог setAttenuation
+        // Подключаем реверберацию для мировых звуков
+        alSource3i(source, AL_AUXILIARY_SEND_FILTER, effectSlot, 0, AL_FILTER_NULL);
+    }
+
+    // Проверяем ошибки
+    ALenum error = alGetError();
+    if (error != AL_NO_ERROR) {
+        logError("OpenAL error before playing sound " + name + ": " + std::to_string(error));
+        return;
+    }
+
+    alSourcePlay(source);
+
+    error = alGetError();
+    if (error != AL_NO_ERROR) {
+        logError("OpenAL error after playing sound " + name + ": " + std::to_string(error));
+    }
+
+    currentSourceIndex = (currentSourceIndex + 1) % SOUND_POOL_SIZE;
 }
 
 void SoundEngine::render() {

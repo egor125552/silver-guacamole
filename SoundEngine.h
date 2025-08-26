@@ -8,6 +8,11 @@
 #include <map>
 #include <chrono>
 
+#include <AL/al.h>
+#include <AL/alc.h>
+#include <AL/alext.h>
+#include <AL/efx.h>
+
 #include "common.h"
 #include "utils.h"
 #include "Stealth.h"
@@ -37,7 +42,7 @@ struct Weapon {
 class SoundEngine {
 public:
     SoundEngine();
-    ~SoundEngine(); // Объявляем деструктор для исправления ошибки компиляции
+    ~SoundEngine();
 
     void run();
     
@@ -69,10 +74,16 @@ private:
     std::map<WeaponType, Weapon> weapons;
 
     // --- Звуковая система ---
+    ALCdevice* openalDevice = nullptr;
+    ALCcontext* openalContext = nullptr;
+    ALuint reverbEffect = 0;
+    ALuint effectSlot = 0;
+
     static constexpr size_t SOUND_POOL_SIZE = 64;
     std::map<std::string, sf::SoundBuffer> soundBuffers;
-    std::vector<sf::Sound> soundPool;
-    size_t currentSoundIndex = 0;
+    std::map<std::string, ALuint> openalBuffers;
+    std::vector<ALuint> soundSources;
+    size_t currentSourceIndex = 0;
     sf::SoundBuffer dummyBuffer; // Для инициализации
 
     // Специализированные звуки
@@ -90,6 +101,8 @@ private:
     bool audioInitialized = false;
 
     // --- Инициализация ---
+    void InitOpenAL();
+    void ShutdownOpenAL();
     void setupConsole();
     void loadSettings();
     void loadSounds();
