@@ -1,29 +1,4 @@
 #include "SoundEngine.h"
-
-// --- EFX Function Pointers ---
-LPALGENEFFECTS alGenEffects = nullptr;
-LPALDELETEEFFECTS alDeleteEffects = nullptr;
-LPALISEFFECT alIsEffect = nullptr;
-LPALEFFECTI alEffecti = nullptr;
-LPALEFFECTIV alEffectiv = nullptr;
-LPALEFFECTF alEffectf = nullptr;
-LPALEFFECTFV alEffectfv = nullptr;
-LPALGETEFFECTI alGetEffecti = nullptr;
-LPALGETEFFECTIV alGetEffectiv = nullptr;
-LPALGETEFFECTF alGetEffectf = nullptr;
-LPALGETEFFECTFV alGetEffectfv = nullptr;
-LPALGENAUXILIARYEFFECTSLOTS alGenAuxiliaryEffectSlots = nullptr;
-LPALDELETEAUXILIARYEFFECTSLOTS alDeleteAuxiliaryEffectSlots = nullptr;
-LPALISAUXILIARYEFFECTSLOT alIsAuxiliaryEffectSlot = nullptr;
-LPALAUXILIARYEFFECTSLOTI alAuxiliaryEffectSloti = nullptr;
-LPALAUXILIARYEFFECTSLOTIV alAuxiliaryEffectSlotiv = nullptr;
-LPALAUXILIARYEFFECTSLOTF alAuxiliaryEffectSlotf = nullptr;
-LPALAUXILIARYEFFECTSLOTFV alAuxiliaryEffectSlotfv = nullptr;
-LPALGETAUXILIARYEFFECTSLOTI alGetAuxiliaryEffectSloti = nullptr;
-LPALGETAUXILIARYEFFECTSLOTIV alGetAuxiliaryEffectSlotiv = nullptr;
-LPALGETAUXILIARYEFFECTSLOTF alGetAuxiliaryEffectSlotf = nullptr;
-LPALGETAUXILIARYEFFECTSLOTFV alGetAuxiliaryEffectSlotfv = nullptr;
-
 #include "Player.h"
 #include "Enemy.h"
 #include "utils.h"
@@ -157,19 +132,6 @@ void SoundEngine::InitOpenAL() {
         alcDestroyContext(openalContext);
         alcCloseDevice(openalDevice);
         throw std::runtime_error("Failed to make OpenAL context current");
-    }
-
-    // Загружаем функции EFX
-    alGenEffects = (LPALGENEFFECTS)alGetProcAddress("alGenEffects");
-    alDeleteEffects = (LPALDELETEEFFECTS)alGetProcAddress("alDeleteEffects");
-    alEffecti = (LPALEFFECTI)alGetProcAddress("alEffecti");
-    alEffectf = (LPALEFFECTF)alGetProcAddress("alEffectf");
-    alGenAuxiliaryEffectSlots = (LPALGENAUXILIARYEFFECTSLOTS)alGetProcAddress("alGenAuxiliaryEffectSlots");
-    alDeleteAuxiliaryEffectSlots = (LPALDELETEAUXILIARYEFFECTSLOTS)alGetProcAddress("alDeleteAuxiliaryEffectSlots");
-    alAuxiliaryEffectSloti = (LPALAUXILIARYEFFECTSLOTI)alGetProcAddress("alAuxiliaryEffectSloti");
-
-    if (!alGenEffects || !alDeleteEffects || !alEffecti || !alEffectf || !alGenAuxiliaryEffectSlots || !alDeleteAuxiliaryEffectSlots || !alAuxiliaryEffectSloti) {
-        throw std::runtime_error("Failed to load EFX functions");
     }
 
     // Создаем эффект реверберации
