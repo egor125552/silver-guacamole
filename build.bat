@@ -5,9 +5,9 @@ echo =======================================
 echo.
 
 REM !!! IMPORTANT !!!
-REM Set the path to your local SFML installation directory here.
-REM This is the directory that contains the 'lib', 'include', etc. subdirectories.
-SET SFML_INSTALL_PATH=C:\dev\SFML-3.0.1
+REM Set the path to the root of your vcpkg installation directory.
+REM This is the directory that contains 'installed', 'scripts', etc.
+SET VCPKG_ROOT=C:\dev\vcpkg
 
 REM Set the path to your MinGW bin directory if it's not in your system's PATH
 REM Example: SET MINGW_PATH=C:\msys64\mingw64\bin
@@ -31,11 +31,15 @@ if not exist build (
 cd build
 
 echo --- Configuring project with CMake...
-REM We pass the path to SFML's cmake config files directly to CMake.
-cmake .. -G "MinGW Makefiles" -DSFML_DIR="%SFML_INSTALL_PATH%/lib/cmake/SFML"
+REM We point CMake to the vcpkg toolchain file.
+REM This automatically finds all libraries installed with vcpkg.
+SET VCPKG_TOOLCHAIN_FILE=%VCPKG_ROOT%\scripts\buildsystems\vcpkg.cmake
+cmake .. -G "MinGW Makefiles" -DCMAKE_TOOLCHAIN_FILE="%VCPKG_TOOLCHAIN_FILE%"
 if %errorlevel% neq 0 (
     echo.
-    echo [ERROR] CMake configuration failed. Check the SFML_INSTALL_PATH variable in this script.
+    echo [ERROR] CMake configuration failed.
+    echo Check that VCPKG_ROOT is set correctly in this script.
+    echo Also ensure you have run 'vcpkg integrate install'.
     goto :error
 )
 
