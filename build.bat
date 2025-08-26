@@ -4,6 +4,11 @@ echo  BUILDING STEALTH ACTION GAME FOR WINDOWS
 echo =======================================
 echo.
 
+REM !!! IMPORTANT !!!
+REM Set the path to your local SFML installation directory here.
+REM This is the directory that contains the 'lib', 'include', etc. subdirectories.
+SET SFML_INSTALL_PATH=C:\dev\SFML-3.0.1
+
 REM Set the path to your MinGW bin directory if it's not in your system's PATH
 REM Example: SET MINGW_PATH=C:\msys64\mingw64\bin
 REM SET PATH=%MINGW_PATH%;%PATH%
@@ -26,11 +31,11 @@ if not exist build (
 cd build
 
 echo --- Configuring project with CMake...
-REM The "MinGW Makefiles" generator must be specified on Windows.
-cmake .. -G "MinGW Makefiles"
+REM We pass the path to SFML's cmake config files directly to CMake.
+cmake .. -G "MinGW Makefiles" -DSFML_DIR="%SFML_INSTALL_PATH%/lib/cmake/SFML"
 if %errorlevel% neq 0 (
     echo.
-    echo [ERROR] CMake configuration failed.
+    echo [ERROR] CMake configuration failed. Check the SFML_INSTALL_PATH variable in this script.
     goto :error
 )
 
