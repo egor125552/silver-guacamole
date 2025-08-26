@@ -10,7 +10,10 @@ find_package(SFML 3.0 REQUIRED COMPONENTS Graphics Audio Window System)
 set(PROJECT_SOURCES
     main.cpp
     SoundEngine.cpp
-    entities.cpp
+    Character.cpp
+    Player.cpp
+    Enemy.cpp
+    Stealth.cpp
 )
 
 add_executable(StealthActionGame ${PROJECT_SOURCES})

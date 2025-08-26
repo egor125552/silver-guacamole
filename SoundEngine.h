@@ -10,9 +10,10 @@
 
 #include "common.h"
 #include "utils.h"
+#include "Stealth.h"
 
 // Предварительные объявления, чтобы избежать циклических зависимостей
-class NPC;
+class Enemy;
 class Player;
 
 // Перечисление для состояний игры
@@ -42,8 +43,8 @@ public:
     
     // Публичные методы для взаимодействия с движком
     void playSound(const std::string& name, sf::Vector3f position, float volume = 100.f, bool isListenerRelative = false, float pitch = -1.f);
-    void onNpcSpottedPlayer(NPC* spottedBy, bool forceCombat = false);
-    void onNpcDied(NPC* deadNpc);
+    void onEnemySpottedPlayer(Enemy* spottedBy, bool forceCombat = false);
+    void onEnemyDied(Enemy* deadEnemy);
     bool hasLineOfSightTo(const sf::Vector3f& target);
     
     const GameSettings& getSettings() const { return settings; }
@@ -59,8 +60,9 @@ private:
 
     // --- Игровые сущности ---
     std::unique_ptr<Player> player;
-    std::vector<std::unique_ptr<NPC>> npcs;
+    std::vector<std::unique_ptr<Enemy>> enemies;
     std::vector<sf::FloatRect> walls;
+    std::vector<sf::FloatRect> shadowZones;
     static constexpr int INITIAL_NPC_COUNT = 20;
 
     // --- Оружие ---
@@ -78,6 +80,7 @@ private:
     sf::Sound sonarSound;
     sf::Sound lowHealthSound;
     sf::Sound detectionTickSound;
+    sf::Sound shadowSound;
     
     // Таймеры для механик
     sf::Clock sonarClock;
@@ -103,12 +106,14 @@ private:
     void generateLevel();
 
     // --- Игровые механики ---
-    void handleNpcActions(float deltaTime);
+    void handleEnemyActions(float deltaTime);
     void handlePlayerAttack();
+    void handlePlayerTakedown();
     void activateSonar();
     void activateDirectionalSonar(int numpadKey);
     void updateProximitySonar();
     void updateLowHealthSound();
+    void updateShadowSound();
 };
 
 // Глобальная функция для логирования, т.к. она используется и в main
