@@ -1,6 +1,50 @@
 #include "SoundEngine.h"
 #include "Player.h"
 #include "Enemy.h"
+
+#include <AL/efx-presets.h>
+
+// Определения и указатели на функции EFX
+namespace {
+    // Effect objects
+    LPALGENEFFECTS alGenEffects = nullptr;
+    LPALDELETEEFFECTS alDeleteEffects = nullptr;
+    LPALISEFFECT alIsEffect = nullptr;
+    LPALEFFECTI alEffecti = nullptr;
+    LPALEFFECTIV alEffectiv = nullptr;
+    LPALEFFECTF alEffectf = nullptr;
+    LPALEFFECTFV alEffectfv = nullptr;
+    LPALGETEFFECTI alGetEffecti = nullptr;
+    LPALGETEFFECTIV alGetEffectiv = nullptr;
+    LPALGETEFFECTF alGetEffectf = nullptr;
+    LPALGETEFFECTFV alGetEffectfv = nullptr;
+
+    // Filter objects
+    LPALGENFILTERS alGenFilters = nullptr;
+    LPALDELETEFILTERS alDeleteFilters = nullptr;
+    LPALISFILTER alIsFilter = nullptr;
+    LPALFILTERI alFilteri = nullptr;
+    LPALFILTERIV alFilteriv = nullptr;
+    LPALFILTERF alFilterf = nullptr;
+    LPALFILTERFV alFilterfv = nullptr;
+    LPALGETFILTERI alGetFilteri = nullptr;
+    LPALGETFILTERIV alGetFilteriv = nullptr;
+    LPALGETFILTERF alGetFilterf = nullptr;
+    LPALGETFILTERFV alGetFilterfv = nullptr;
+
+    // Auxiliary Effect Slot objects
+    LPALGENAUXILIARYEFFECTSLOTS alGenAuxiliaryEffectSlots = nullptr;
+    LPALDELETEAUXILIARYEFFECTSLOTS alDeleteAuxiliaryEffectSlots = nullptr;
+    LPALISAUXILIARYEFFECTSLOT alIsAuxiliaryEffectSlot = nullptr;
+    LPALAUXILIARYEFFECTSLOTI alAuxiliaryEffectSloti = nullptr;
+    LPALAUXILIARYEFFECTSLOTIV alAuxiliaryEffectSlotiv = nullptr;
+    LPALAUXILIARYEFFECTSLOTF alAuxiliaryEffectSlotf = nullptr;
+    LPALAUXILIARYEFFECTSLOTFV alAuxiliaryEffectSlotfv = nullptr;
+    LPALGETAUXILIARYEFFECTSLOTI alGetAuxiliaryEffectSloti = nullptr;
+    LPALGETAUXILIARYEFFECTSLOTIV alGetAuxiliaryEffectSlotiv = nullptr;
+    LPALGETAUXILIARYEFFECTSLOTF alGetAuxiliaryEffectSlotf = nullptr;
+    LPALGETAUXILIARYEFFECTSLOTFV alGetAuxiliaryEffectSlotfv = nullptr;
+}
 #include "utils.h"
 #include "ai_definitions.h"
 
@@ -134,38 +178,70 @@ void SoundEngine::InitOpenAL() {
         throw std::runtime_error("Failed to make OpenAL context current");
     }
 
-    // Создаем эффект реверберации
-    alGenEffects(1, &reverbEffect);
-    if (alGetError() != AL_NO_ERROR) {
-        throw std::runtime_error("Failed to generate EFX effect");
-    }
-    alEffecti(reverbEffect, AL_EFFECT_TYPE, AL_EFFECT_REVERB);
+    // --- Загрузка функций EFX ---
+    if (alcIsExtensionPresent(openalDevice, "ALC_EXT_EFX") == AL_FALSE) {
+        logError("AUDIO_WARNING: EFX extension not available on this device. Reverb will be disabled.");
+    } else {
+        logError("DEBUG_LOG: EFX extension found. Loading function pointers...");
+        #define LOAD_PROC(T, x) ((x) = (T)alGetProcAddress(#x))
+        LOAD_PROC(LPALGENEFFECTS, alGenEffects);
+        LOAD_PROC(LPALDELETEEFFECTS, alDeleteEffects);
+        LOAD_PROC(LPALISEFFECT, alIsEffect);
+        LOAD_PROC(LPALEFFECTI, alEffecti);
+        LOAD_PROC(LPALEFFECTIV, alEffectiv);
+        LOAD_PROC(LPALEFFECTF, alEffectf);
+        LOAD_PROC(LPALEFFECTFV, alEffectfv);
+        LOAD_PROC(LPALGETEFFECTI, alGetEffecti);
+        LOAD_PROC(LPALGETEFFECTIV, alGetEffectiv);
+        LOAD_PROC(LPALGETEFFECTF, alGetEffectf);
+        LOAD_PROC(LPALGETEFFECTFV, alGetEffectfv);
+        LOAD_PROC(LPALGENAUXILIARYEFFECTSLOTS, alGenAuxiliaryEffectSlots);
+        LOAD_PROC(LPALDELETEAUXILIARYEFFECTSLOTS, alDeleteAuxiliaryEffectSlots);
+        LOAD_PROC(LPALISAUXILIARYEFFECTSLOT, alIsAuxiliaryEffectSlot);
+        LOAD_PROC(LPALAUXILIARYEFFECTSLOTI, alAuxiliaryEffectSloti);
+        LOAD_PROC(LPALAUXILIARYEFFECTSLOTIV, alAuxiliaryEffectSlotiv);
+        LOAD_PROC(LPALAUXILIARYEFFECTSLOTF, alAuxiliaryEffectSlotf);
+        LOAD_PROC(LPALAUXILIARYEFFECTSLOTFV, alAuxiliaryEffectSlotfv);
+        LOAD_PROC(LPALGETAUXILIARYEFFECTSLOTI, alGetAuxiliaryEffectSloti);
+        LOAD_PROC(LPALGETAUXILIARYEFFECTSLOTIV, alGetAuxiliaryEffectSlotiv);
+        LOAD_PROC(LPALGETAUXILIARYEFFECTSLOTF, alGetAuxiliaryEffectSlotf);
+        LOAD_PROC(LPALGETAUXILIARYEFFECTSLOTFV, alGetAuxiliaryEffectSlotfv);
+        #undef LOAD_PROC
 
-    // Используем пресет STONEROOM
-    alEffectf(reverbEffect, AL_REVERB_DENSITY, 1.0000f);
-    alEffectf(reverbEffect, AL_REVERB_DIFFUSION, 1.0000f);
-    alEffectf(reverbEffect, AL_REVERB_GAIN, 0.3162f);
-    alEffectf(reverbEffect, AL_REVERB_GAINHF, 0.7079f);
-    alEffectf(reverbEffect, AL_REVERB_DECAY_TIME, 2.3100f);
-    alEffectf(reverbEffect, AL_REVERB_DECAY_HFRATIO, 0.6400f);
-    alEffectf(reverbEffect, AL_REVERB_REFLECTIONS_GAIN, 0.4411f);
-    alEffectf(reverbEffect, AL_REVERB_REFLECTIONS_DELAY, 0.0120f);
-    alEffectf(reverbEffect, AL_REVERB_LATE_REVERB_GAIN, 1.1003f);
-    alEffectf(reverbEffect, AL_REVERB_LATE_REVERB_DELAY, 0.0170f);
-    alEffectf(reverbEffect, AL_REVERB_AIR_ABSORPTION_GAINHF, 0.9943f);
-    alEffectf(reverbEffect, AL_REVERB_ROOM_ROLLOFF_FACTOR, 0.0f);
-    alEffecti(reverbEffect, AL_REVERB_DECAY_HFLIMIT, AL_TRUE);
+        // Создаем эффект реверберации
+        alGenEffects(1, &reverbEffect);
+        if (alGetError() != AL_NO_ERROR) {
+            throw std::runtime_error("Failed to generate EFX effect");
+        }
+        alEffecti(reverbEffect, AL_EFFECT_TYPE, AL_EFFECT_REVERB);
 
-    // Создаем слот для эффекта
-    alGenAuxiliaryEffectSlots(1, &effectSlot);
-    if (alGetError() != AL_NO_ERROR) {
-        throw std::runtime_error("Failed to generate EFX slot");
-    }
+        // Используем пресет STONEROOM
+        alEffectf(reverbEffect, AL_REVERB_DENSITY, 1.0000f);
+        alEffectf(reverbEffect, AL_REVERB_DIFFUSION, 1.0000f);
+        alEffectf(reverbEffect, AL_REVERB_GAIN, 0.3162f);
+        alEffectf(reverbEffect, AL_REVERB_GAINHF, 0.7079f);
+        alEffectf(reverbEffect, AL_REVERB_DECAY_TIME, 2.3100f);
+        alEffectf(reverbEffect, AL_REVERB_DECAY_HFRATIO, 0.6400f);
+        alEffectf(reverbEffect, AL_REVERB_REFLECTIONS_GAIN, 0.4411f);
+        alEffectf(reverbEffect, AL_REVERB_REFLECTIONS_DELAY, 0.0120f);
+        alEffectf(reverbEffect, AL_REVERB_LATE_REVERB_GAIN, 1.1003f);
+        alEffectf(reverbEffect, AL_REVERB_LATE_REVERB_DELAY, 0.0170f);
+        alEffectf(reverbEffect, AL_REVERB_AIR_ABSORPTION_GAINHF, 0.9943f);
+        alEffectf(reverbEffect, AL_REVERB_ROOM_ROLLOFF_FACTOR, 0.0f);
+        alEffecti(reverbEffect, AL_REVERB_DECAY_HFLIMIT, AL_TRUE);
 
-    // Привязываем эффект к слоту
-    alAuxiliaryEffectSloti(effectSlot, AL_EFFECTSLOT_EFFECT, reverbEffect);
-    if (alGetError() != AL_NO_ERROR) {
-        throw std::runtime_error("Failed to bind effect to slot");
+        // Создаем слот для эффекта
+        alGenAuxiliaryEffectSlots(1, &effectSlot);
+        if (alGetError() != AL_NO_ERROR) {
+            throw std::runtime_error("Failed to generate EFX slot");
+        }
+
+        // Привязываем эффект к слоту
+        alAuxiliaryEffectSloti(effectSlot, AL_EFFECTSLOT_EFFECT, reverbEffect);
+        if (alGetError() != AL_NO_ERROR) {
+            throw std::runtime_error("Failed to bind effect to slot");
+        }
+        logError("DEBUG_LOG: EFX reverb effect created and configured.");
     }
 
     // Создаем пул источников звука
@@ -191,8 +267,12 @@ void SoundEngine::ShutdownOpenAL() {
         alDeleteBuffers(buffersToDelete.size(), buffersToDelete.data());
         openalBuffers.clear();
 
-        alDeleteAuxiliaryEffectSlots(1, &effectSlot);
-        alDeleteEffects(1, &reverbEffect);
+        if (alDeleteAuxiliaryEffectSlots && effectSlot != 0) {
+            alDeleteAuxiliaryEffectSlots(1, &effectSlot);
+        }
+        if (alDeleteEffects && reverbEffect != 0) {
+            alDeleteEffects(1, &reverbEffect);
+        }
 
         alcMakeContextCurrent(nullptr);
         alcDestroyContext(openalContext);
@@ -845,8 +925,10 @@ void SoundEngine::playSound(const std::string& name, sf::Vector3f position, floa
         alSource3f(source, AL_POSITION, position.x, position.y, position.z);
         alSourcef(source, AL_REFERENCE_DISTANCE, 4.0f); // Аналог setMinDistance
         alSourcef(source, AL_ROLLOFF_FACTOR, 1.5f);     // Аналог setAttenuation
-        // Подключаем реверберацию для мировых звуков
-        alSource3i(source, AL_AUXILIARY_SEND_FILTER, effectSlot, 0, AL_FILTER_NULL);
+        // Подключаем реверберацию для мировых звуков, если EFX доступен
+        if (effectSlot != 0) {
+            alSource3i(source, AL_AUXILIARY_SEND_FILTER, effectSlot, 0, AL_FILTER_NULL);
+        }
     }
 
     // Проверяем ошибки
