@@ -3,6 +3,9 @@
 #include "Enemy.h"
 
 #include <AL/efx-presets.h>
+#include <vorbis/vorbisfile.h>
+#include <vector>
+#include <iostream>
 
 // Определения и указатели на функции EFX
 namespace {
@@ -44,6 +47,57 @@ namespace {
     LPALGETAUXILIARYEFFECTSLOTIV alGetAuxiliaryEffectSlotiv = nullptr;
     LPALGETAUXILIARYEFFECTSLOTF alGetAuxiliaryEffectSlotf = nullptr;
     LPALGETAUXILIARYEFFECTSLOTFV alGetAuxiliaryEffectSlotfv = nullptr;
+
+    // Helper function to load ogg files
+    ALuint load_ogg(const std::string& path) {
+        FILE* fp = fopen(path.c_str(), "rb");
+        if (!fp) {
+            throw std::runtime_error("Could not open Ogg file: " + path);
+        }
+
+        OggVorbis_File vf;
+        if (ov_open_callbacks(fp, &vf, NULL, 0, OV_CALLBACKS_DEFAULT) < 0) {
+            fclose(fp);
+            throw std::runtime_error("ov_open_callbacks failed for: " + path);
+        }
+
+        vorbis_info* vi = ov_info(&vf, -1);
+        ALenum format = (vi->channels == 1) ? AL_FORMAT_MONO16 : AL_FORMAT_STEREO16;
+
+        int eof = 0;
+        long total_size = 0;
+        char pcmout[4096];
+        std::vector<char> buffer_data;
+
+        while(!eof) {
+            long ret = ov_read(&vf, pcmout, sizeof(pcmout), 0, 2, 1, &eof);
+            if (ret < 0) {
+                ov_clear(&vf);
+                throw std::runtime_error("Error in the ogg stream: " + path);
+            } else if (ret > 0) {
+                buffer_data.insert(buffer_data.end(), pcmout, pcmout + ret);
+                total_size += ret;
+            }
+        }
+
+        ALuint buffer = 0;
+        alGenBuffers(1, &buffer);
+        if (alGetError() != AL_NO_ERROR) {
+            ov_clear(&vf);
+            throw std::runtime_error("alGenBuffers failed");
+        }
+
+        alBufferData(buffer, format, buffer_data.data(), total_size, vi->rate);
+        ALenum error = alGetError();
+        if (error != AL_NO_ERROR) {
+            alDeleteBuffers(1, &buffer);
+            ov_clear(&vf);
+            throw std::runtime_error("alBufferData failed with error: " + std::to_string(error));
+        }
+
+        ov_clear(&vf); // This also closes the file pointer
+        return buffer;
+    }
 }
 #include "utils.h"
 #include "ai_definitions.h"
@@ -63,18 +117,6 @@ namespace {
 #include <windows.h>
 #endif
 
-// TODO: Future feature - Vehicle system
-// We will need classes for cars, motorcycles, etc.
-// And a physics system to handle their movement.
-
-// TODO: Future feature - Mission system
-// A system to define objectives, track progress, and give rewards.
-// Can be scripted using another language like Lua in the future.
-
-// TODO: Future feature - Music system
-// A system to play background music that changes based on the situation
-// (e.g., stealth, combat, exploring).
-
 void logError(const std::string& message) {
     std::ofstream log_file("error_log.txt", std::ios_base::app);
     auto now = std::chrono::system_clock::now();
@@ -93,9 +135,7 @@ void logError(const std::string& message) {
 }
 
 SoundEngine::SoundEngine()
-    : window(sf::VideoMode({800, 600}), "Stealth Action - Coordinated Assault", sf::Style::Titlebar | sf::Style::Close),
-      playerDeathSound(dummyBuffer), sonarSound(dummyBuffer),
-      lowHealthSound(dummyBuffer), detectionTickSound(dummyBuffer), shadowSound(dummyBuffer)
+    : window(sf::VideoMode({800, 600}), "Stealth Action - Coordinated Assault", sf::Style::Titlebar | sf::Style::Close)
 {
     logError("DEBUG_LOG: Constructor start.");
     setupConsole();
@@ -104,8 +144,7 @@ SoundEngine::SoundEngine()
     logError("DEBUG_LOG: Settings loaded.");
 
     try {
-        InitOpenAL(); // Инициализируем OpenAL
-
+        InitOpenAL();
         audioInitialized = true;
         logError("DEBUG_LOG: Loading sounds...");
         loadSounds();
@@ -114,25 +153,14 @@ SoundEngine::SoundEngine()
         generateSounds();
         logError("DEBUG_LOG: Sounds generated.");
 
-        playerDeathSound.setBuffer(soundBuffers.at("player_death"));
-        playerDeathSound.setRelativeToListener(true);
-        sonarSound.setBuffer(soundBuffers.at("sonar"));
-        lowHealthSound.setBuffer(soundBuffers.at("LowHealth"));
-        lowHealthSound.setRelativeToListener(true);
-        lowHealthSound.setLooping(true);
-        lowHealthSound.setVolume(80);
-        detectionTickSound.setBuffer(soundBuffers.at("DetectionTick"));
-        detectionTickSound.setRelativeToListener(true);
-        shadowSound.setBuffer(soundBuffers.at("Shadow_Ambience"));
-        shadowSound.setRelativeToListener(true);
-        shadowSound.setLooping(true);
-        shadowSound.setVolume(30);
-        logError("DEBUG_LOG: Special sounds initialized.");
+        // Set a default reverb preset
+        setReverbPreset(EFX_REVERB_PRESET_GENERIC);
+        logError("DEBUG_LOG: Default reverb preset set.");
 
     } catch (const std::exception& e) {
         logError("AUDIO_ERROR: Failed to initialize sounds. Game will run without audio. Error: " + std::string(e.what()));
         audioInitialized = false;
-        soundBuffers.clear();
+        openalBuffers.clear();
     }
 
     logError("DEBUG_LOG: Creating player...");
@@ -159,6 +187,28 @@ SoundEngine::SoundEngine()
 SoundEngine::~SoundEngine() {
     ShutdownOpenAL();
 }
+
+void SoundEngine::setReverbPreset(const EFXEAXREVERBPROPERTIES& preset) {
+    if (!audioInitialized || !alEffecti || reverbEffect == 0) return;
+
+    alEffectf(reverbEffect, AL_REVERB_DENSITY, preset.flDensity);
+    alEffectf(reverbEffect, AL_REVERB_DIFFUSION, preset.flDiffusion);
+    alEffectf(reverbEffect, AL_REVERB_GAIN, preset.flGain);
+    alEffectf(reverbEffect, AL_REVERB_GAINHF, preset.flGainHF);
+    alEffectf(reverbEffect, AL_REVERB_DECAY_TIME, preset.flDecayTime);
+    alEffectf(reverbEffect, AL_REVERB_DECAY_HFRATIO, preset.flDecayHFRatio);
+    alEffectf(reverbEffect, AL_REVERB_REFLECTIONS_GAIN, preset.flReflectionsGain);
+    alEffectf(reverbEffect, AL_REVERB_REFLECTIONS_DELAY, preset.flReflectionsDelay);
+    alEffectf(reverbEffect, AL_REVERB_LATE_REVERB_GAIN, preset.flLateReverbGain);
+    alEffectf(reverbEffect, AL_REVERB_LATE_REVERB_DELAY, preset.flLateReverbDelay);
+    alEffectf(reverbEffect, AL_REVERB_AIR_ABSORPTION_GAINHF, preset.flAirAbsorptionGainHF);
+    alEffectf(reverbEffect, AL_REVERB_ROOM_ROLLOFF_FACTOR, preset.flRoomRolloffFactor);
+    alEffecti(reverbEffect, AL_REVERB_DECAY_HFLIMIT, (ALint)preset.iDecayHFLimit);
+
+    // After setting the effect, we need to attach it to the slot again.
+    alAuxiliaryEffectSloti(effectSlot, AL_EFFECTSLOT_EFFECT, reverbEffect);
+}
+
 
 void SoundEngine::InitOpenAL() {
     openalDevice = alcOpenDevice(nullptr);
@@ -214,34 +264,16 @@ void SoundEngine::InitOpenAL() {
             throw std::runtime_error("Failed to generate EFX effect");
         }
         alEffecti(reverbEffect, AL_EFFECT_TYPE, AL_EFFECT_REVERB);
-
-        // Используем пресет STONEROOM
-        alEffectf(reverbEffect, AL_REVERB_DENSITY, 1.0000f);
-        alEffectf(reverbEffect, AL_REVERB_DIFFUSION, 1.0000f);
-        alEffectf(reverbEffect, AL_REVERB_GAIN, 0.3162f);
-        alEffectf(reverbEffect, AL_REVERB_GAINHF, 0.7079f);
-        alEffectf(reverbEffect, AL_REVERB_DECAY_TIME, 2.3100f);
-        alEffectf(reverbEffect, AL_REVERB_DECAY_HFRATIO, 0.6400f);
-        alEffectf(reverbEffect, AL_REVERB_REFLECTIONS_GAIN, 0.4411f);
-        alEffectf(reverbEffect, AL_REVERB_REFLECTIONS_DELAY, 0.0120f);
-        alEffectf(reverbEffect, AL_REVERB_LATE_REVERB_GAIN, 1.1003f);
-        alEffectf(reverbEffect, AL_REVERB_LATE_REVERB_DELAY, 0.0170f);
-        alEffectf(reverbEffect, AL_REVERB_AIR_ABSORPTION_GAINHF, 0.9943f);
-        alEffectf(reverbEffect, AL_REVERB_ROOM_ROLLOFF_FACTOR, 0.0f);
-        alEffecti(reverbEffect, AL_REVERB_DECAY_HFLIMIT, AL_TRUE);
+        if (alGetError() != AL_NO_ERROR) {
+            throw std::runtime_error("Failed to set EFX effect type");
+        }
 
         // Создаем слот для эффекта
         alGenAuxiliaryEffectSlots(1, &effectSlot);
         if (alGetError() != AL_NO_ERROR) {
             throw std::runtime_error("Failed to generate EFX slot");
         }
-
-        // Привязываем эффект к слоту
-        alAuxiliaryEffectSloti(effectSlot, AL_EFFECTSLOT_EFFECT, reverbEffect);
-        if (alGetError() != AL_NO_ERROR) {
-            throw std::runtime_error("Failed to bind effect to slot");
-        }
-        logError("DEBUG_LOG: EFX reverb effect created and configured.");
+        logError("DEBUG_LOG: EFX reverb effect created.");
     }
 
     // Создаем пул источников звука
@@ -250,6 +282,11 @@ void SoundEngine::InitOpenAL() {
     if (alGetError() != AL_NO_ERROR) {
         throw std::runtime_error("Failed to generate OpenAL sources");
     }
+
+    // Создаем выделенные источники для зацикленных звуков
+    alGenSources(1, &lowHealthSoundSource);
+    alGenSources(1, &shadowSoundSource);
+
     logError("DEBUG_LOG: OpenAL initialized successfully.");
 }
 
@@ -257,9 +294,13 @@ void SoundEngine::ShutdownOpenAL() {
     if (openalContext) {
         // Stop all sources
         alSourceStopv(soundSources.size(), soundSources.data());
+        alSourceStop(lowHealthSoundSource);
+        alSourceStop(shadowSoundSource);
 
         // Delete sources and buffers
         alDeleteSources(soundSources.size(), soundSources.data());
+        alDeleteSources(1, &lowHealthSoundSource);
+        alDeleteSources(1, &shadowSoundSource);
         std::vector<ALuint> buffersToDelete;
         for(auto const& [name, buffer] : openalBuffers) {
             buffersToDelete.push_back(buffer);
@@ -368,72 +409,72 @@ void SoundEngine::loadSounds() {
         const std::string& name = pair.first;
         const std::string& category = pair.second;
         std::string path = "sounds/" + category + "/" + name + ".ogg";
-        bool loaded = soundBuffers[name].loadFromFile(path);
-        if (!loaded) {
-            // Fallback to root sounds directory for compatibility
-            std::string fallbackPath = "sounds/" + name + ".ogg";
-            loaded = soundBuffers[name].loadFromFile(fallbackPath);
-        }
 
-        if (loaded) {
-            ALuint buffer;
-            alGenBuffers(1, &buffer);
-            ALenum format = (soundBuffers[name].getChannelCount() == 1) ? AL_FORMAT_MONO16 : AL_FORMAT_STEREO16;
-            alBufferData(buffer, format, soundBuffers[name].getSamples(), soundBuffers[name].getSampleCount() * sizeof(std::int16_t), soundBuffers[name].getSampleRate());
-            openalBuffers[name] = buffer;
-        } else {
-            throw std::runtime_error("Не удалось загрузить звук: " + path);
+        try {
+            openalBuffers[name] = load_ogg(path);
+        } catch (const std::runtime_error& e) {
+            try {
+                std::string fallbackPath = "sounds/" + name + ".ogg";
+                openalBuffers[name] = load_ogg(fallbackPath);
+            } catch (const std::runtime_error& e2) {
+                throw std::runtime_error("Failed to load sound " + name + ": " + e.what());
+            }
         }
     }
 }
 
-// ВЕРСИЯ ДЛЯ SFML 3.0
 void SoundEngine::generateSounds() {
     std::vector<std::int16_t> samples;
-    bool success;
-    samples.assign(44100 / 10, 0); for (size_t i = 0; i < samples.size(); ++i) { float t = static_cast<float>(i)/44100.0f; samples[i] = static_cast<std::int16_t>(15000.0f * sin(2*3.14159f*600.0f*t) * exp(-t*30.0f)); } success = soundBuffers["DetectionTick"].loadFromSamples(samples.data(), samples.size(), 1, 44100, {sf::SoundChannel::Mono}); if (!success) throw std::runtime_error("Failed to generate DetectionTick");
-    samples.assign(44100 / 2, 0); for (size_t i = 0; i < samples.size(); ++i) { float t = static_cast<float>(i)/44100.0f; samples[i] = static_cast<std::int16_t>(32000.0f * sin(2*3.14159f*440.0f*t) * (1.0f-t*2.0f)); } success = soundBuffers["Spotted"].loadFromSamples(samples.data(), samples.size(), 1, 44100, {sf::SoundChannel::Mono}); if (!success) throw std::runtime_error("Failed to generate Spotted");
-    samples.assign(44100, 0); for (size_t i = 0; i < samples.size(); ++i) { float t = static_cast<float>(i)/44100.0f; float pulse = (sin(2*3.14159f*2.0f*t)+1.0f)/2.0f; samples[i] = static_cast<std::int16_t>(20000.0f * sin(2*3.14159f*300.0f*t) * pulse); } success = soundBuffers["LowHealth"].loadFromSamples(samples.data(), samples.size(), 1, 44100, {sf::SoundChannel::Mono}); if (!success) throw std::runtime_error("Failed to generate LowHealth");
-    samples.assign(44100/5, 0); for (size_t i=0; i < samples.size(); ++i) { float t = static_cast<float>(i)/44100.0f; samples[i] = static_cast<std::int16_t>(32000.0f * sin(2*3.14159f*900.0f*t) * exp(-t*20.0f)); } success = soundBuffers["sonar"].loadFromSamples(samples.data(), samples.size(), 1, 44100, {sf::SoundChannel::Mono}); if (!success) throw std::runtime_error("Failed to generate Sonar");
-    samples.assign(44100/30, 0);for (size_t i=0; i < samples.size(); ++i) { float t = static_cast<float>(i)/44100.0f; samples[i] = static_cast<std::int16_t>(18000.0f * sin(2*3.14159f*1200.0f*t) * exp(-t*80.0f)); } success = soundBuffers["sonar_echo"].loadFromSamples(samples.data(), samples.size(), 1, 44100, {sf::SoundChannel::Mono}); if (!success) throw std::runtime_error("Failed to generate sonar_echo");
-    samples.assign(44100/20, 0); for (size_t i=0; i < samples.size(); ++i) { float t = static_cast<float>(i)/44100.0f; samples[i] = static_cast<std::int16_t>(25000.0f*sin(2*3.14159f*880.0f*t)*exp(-t*50.0f)); } success = soundBuffers["HealthIndicator"].loadFromSamples(samples.data(), samples.size(), 1, 44100, {sf::SoundChannel::Mono}); if (!success) throw std::runtime_error("Failed to generate HealthIndicator");
-    samples.assign(44100/15, 0); for (size_t i=0; i < samples.size(); ++i) { float t = static_cast<float>(i)/44100.0f; samples[i] = static_cast<std::int16_t>(20000.0f*sin(2*3.14159f*600.0f*t)*exp(-t*40.0f)); } success = soundBuffers["MenuSelect"].loadFromSamples(samples.data(), samples.size(), 1, 44100, {sf::SoundChannel::Mono}); if(!success) throw std::runtime_error("Failed to generate MenuSelect");
-    samples.assign(44100/10, 0); for (size_t i=0; i < samples.size(); ++i) { float t = static_cast<float>(i)/44100.0f; samples[i] = static_cast<std::int16_t>(22000.0f*sin(2*3.14159f*440.0f*t)*exp(-t*30.0f)); } success = soundBuffers["MenuConfirm"].loadFromSamples(samples.data(), samples.size(), 1, 44100, {sf::SoundChannel::Mono}); if(!success) throw std::runtime_error("Failed to generate MenuConfirm");
-    samples.assign(44100/8, 0); for (size_t i=0; i < samples.size(); ++i) { float t = static_cast<float>(i)/44100.0f; float freq = 800.0f - sin(t * 3.14159f * 4.0f) * 400.0f; samples[i] = static_cast<std::int16_t>(28000.0f * sin(2*3.14159f*freq*t) * exp(-t*20.0f)); } success = soundBuffers["Stun"].loadFromSamples(samples.data(), samples.size(), 1, 44100, {sf::SoundChannel::Mono}); if(!success) throw std::runtime_error("Failed to generate Stun");
 
-    // --- New Weapon Sounds ---
-    // Taser Fire
-    samples.assign(44100 / 4, 0); for (size_t i = 0; i < samples.size(); ++i) { float t = static_cast<float>(i) / 44100.0f; float noise = static_cast<float>(rand()) / RAND_MAX * 2.0f - 1.0f; samples[i] = static_cast<std::int16_t>(25000.0f * (sin(2 * 3.14159f * 1200.0f * t) + 0.5f * noise) * exp(-t * 15.0f)); } success = soundBuffers["Taser_Fire"].loadFromSamples(samples.data(), samples.size(), 1, 44100, {sf::SoundChannel::Mono}); if (!success) throw std::runtime_error("Failed to generate Taser_Fire");
-    // Generic Blade Swish (for Shank/Knife)
-    samples.assign(44100 / 7, 0); for (size_t i = 0; i < samples.size(); ++i) { float t = static_cast<float>(i) / 44100.0f; float noise = (static_cast<float>(rand()) / RAND_MAX - 0.5f) * 2.0f; float envelope = exp(-t * 40.0f); samples[i] = static_cast<std::int16_t>(30000.0f * noise * envelope); } success = soundBuffers["Knife_Swish"].loadFromSamples(samples.data(), samples.size(), 1, 44100, {sf::SoundChannel::Mono}); if (!success) throw std::runtime_error("Failed to generate Knife_Swish");
-    // Machete Swish (heavier)
-    samples.assign(44100 / 4, 0); for (size_t i = 0; i < samples.size(); ++i) { float t = static_cast<float>(i) / 44100.0f; float noise = (static_cast<float>(rand()) / RAND_MAX - 0.5f) * 2.0f; float envelope = exp(-t * 20.0f); samples[i] = static_cast<std::int16_t>(25000.0f * noise * envelope); } success = soundBuffers["Machete_Swish"].loadFromSamples(samples.data(), samples.size(), 1, 44100, {sf::SoundChannel::Mono}); if (!success) throw std::runtime_error("Failed to generate Machete_Swish");
-    // Bat Swish (classic whoosh)
-    samples.assign(44100 / 5, 0); for (size_t i = 0; i < samples.size(); ++i) { float t = static_cast<float>(i) / 44100.0f; float freq = 600.0f - t * 3000.0f; samples[i] = static_cast<std::int16_t>(22000.0f * sin(2 * 3.14159f * freq * t) * exp(-t * 20.0f)); } success = soundBuffers["Bat_Swish"].loadFromSamples(samples.data(), samples.size(), 1, 44100, {sf::SoundChannel::Mono}); if (!success) throw std::runtime_error("Failed to generate Bat_Swish");
-    // Crowbar/Baton Swish (more metallic)
-    samples.assign(44100 / 6, 0); for (size_t i = 0; i < samples.size(); ++i) { float t = static_cast<float>(i) / 44100.0f; float freq = 800.0f - t * 2500.0f; samples[i] = static_cast<std::int16_t>(20000.0f * (sin(2 * 3.14159f * freq * t) + 0.2f * sin(2 * 3.14159f * freq * 2.5f * t)) * exp(-t * 30.0f)); } success = soundBuffers["Blunt_Metal_Swish"].loadFromSamples(samples.data(), samples.size(), 1, 44100, {sf::SoundChannel::Mono}); if (!success) throw std::runtime_error("Failed to generate Blunt_Metal_Swish");
-
-    // --- New Ambiance Sounds ---
-    // Shadow Ambiance (subtle rustle/wind)
-    samples.assign(44100, 0); for (size_t i = 0; i < samples.size(); ++i) { samples[i] = static_cast<std::int16_t>((static_cast<float>(rand()) / RAND_MAX - 0.5f) * 4000.0f); } success = soundBuffers["Shadow_Ambience"].loadFromSamples(samples.data(), samples.size(), 1, 44100, {sf::SoundChannel::Mono}); if (!success) throw std::runtime_error("Failed to generate Shadow_Ambience");
-
-    // --- Create OpenAL buffers for all generated sounds ---
-    for (auto const& [name, sbuffer] : soundBuffers) {
-        // Only generate for sounds that are not yet in openalBuffers map
+    auto create_buffer = [&](const std::string& name, const std::vector<std::int16_t>& sample_data, int channels, int sample_rate) {
         if (openalBuffers.find(name) == openalBuffers.end()) {
             ALuint buffer;
             alGenBuffers(1, &buffer);
-            ALenum format = (sbuffer.getChannelCount() == 1) ? AL_FORMAT_MONO16 : AL_FORMAT_STEREO16;
-            alBufferData(buffer, format, sbuffer.getSamples(), sbuffer.getSampleCount() * sizeof(std::int16_t), sbuffer.getSampleRate());
+            ALenum format = (channels == 1) ? AL_FORMAT_MONO16 : AL_FORMAT_STEREO16;
+            alBufferData(buffer, format, sample_data.data(), sample_data.size() * sizeof(std::int16_t), sample_rate);
+            if (alGetError() != AL_NO_ERROR) {
+                throw std::runtime_error("Failed to create OpenAL buffer for generated sound: " + name);
+            }
             openalBuffers[name] = buffer;
         }
-    }
+    };
+
+    samples.assign(44100 / 10, 0); for (size_t i = 0; i < samples.size(); ++i) { float t = static_cast<float>(i)/44100.0f; samples[i] = static_cast<std::int16_t>(15000.0f * sin(2*3.14159f*600.0f*t) * exp(-t*30.0f)); }
+    create_buffer("DetectionTick", samples, 1, 44100);
+    samples.assign(44100 / 2, 0); for (size_t i = 0; i < samples.size(); ++i) { float t = static_cast<float>(i)/44100.0f; samples[i] = static_cast<std::int16_t>(32000.0f * sin(2*3.14159f*440.0f*t) * (1.0f-t*2.0f)); }
+    create_buffer("Spotted", samples, 1, 44100);
+    samples.assign(44100, 0); for (size_t i = 0; i < samples.size(); ++i) { float t = static_cast<float>(i)/44100.0f; float pulse = (sin(2*3.14159f*2.0f*t)+1.0f)/2.0f; samples[i] = static_cast<std::int16_t>(20000.0f * sin(2*3.14159f*300.0f*t) * pulse); }
+    create_buffer("LowHealth", samples, 1, 44100);
+    samples.assign(44100/5, 0); for (size_t i=0; i < samples.size(); ++i) { float t = static_cast<float>(i)/44100.0f; samples[i] = static_cast<std::int16_t>(32000.0f * sin(2*3.14159f*900.0f*t) * exp(-t*20.0f)); }
+    create_buffer("sonar", samples, 1, 44100);
+    samples.assign(44100/30, 0);for (size_t i=0; i < samples.size(); ++i) { float t = static_cast<float>(i)/44100.0f; samples[i] = static_cast<std::int16_t>(18000.0f * sin(2*3.14159f*1200.0f*t) * exp(-t*80.0f)); }
+    create_buffer("sonar_echo", samples, 1, 44100);
+    samples.assign(44100/20, 0); for (size_t i=0; i < samples.size(); ++i) { float t = static_cast<float>(i)/44100.0f; samples[i] = static_cast<std::int16_t>(25000.0f*sin(2*3.14159f*880.0f*t)*exp(-t*50.0f)); }
+    create_buffer("HealthIndicator", samples, 1, 44100);
+    samples.assign(44100/15, 0); for (size_t i=0; i < samples.size(); ++i) { float t = static_cast<float>(i)/44100.0f; samples[i] = static_cast<std::int16_t>(20000.0f*sin(2*3.14159f*600.0f*t)*exp(-t*40.0f)); }
+    create_buffer("MenuSelect", samples, 1, 44100);
+    samples.assign(44100/10, 0); for (size_t i=0; i < samples.size(); ++i) { float t = static_cast<float>(i)/44100.0f; samples[i] = static_cast<std::int16_t>(22000.0f*sin(2*3.14159f*440.0f*t)*exp(-t*30.0f)); }
+    create_buffer("MenuConfirm", samples, 1, 44100);
+    samples.assign(44100/8, 0); for (size_t i=0; i < samples.size(); ++i) { float t = static_cast<float>(i)/44100.0f; float freq = 800.0f - sin(t * 3.14159f * 4.0f) * 400.0f; samples[i] = static_cast<std::int16_t>(28000.0f * sin(2*3.14159f*freq*t) * exp(-t*20.0f)); }
+    create_buffer("Stun", samples, 1, 44100);
+    samples.assign(44100 / 4, 0); for (size_t i = 0; i < samples.size(); ++i) { float t = static_cast<float>(i) / 44100.0f; float noise = static_cast<float>(rand()) / RAND_MAX * 2.0f - 1.0f; samples[i] = static_cast<std::int16_t>(25000.0f * (sin(2 * 3.14159f * 1200.0f * t) + 0.5f * noise) * exp(-t * 15.0f)); }
+    create_buffer("Taser_Fire", samples, 1, 44100);
+    samples.assign(44100 / 7, 0); for (size_t i = 0; i < samples.size(); ++i) { float t = static_cast<float>(i) / 44100.0f; float noise = (static_cast<float>(rand()) / RAND_MAX - 0.5f) * 2.0f; float envelope = exp(-t * 40.0f); samples[i] = static_cast<std::int16_t>(30000.0f * noise * envelope); }
+    create_buffer("Knife_Swish", samples, 1, 44100);
+    samples.assign(44100 / 4, 0); for (size_t i = 0; i < samples.size(); ++i) { float t = static_cast<float>(i) / 44100.0f; float noise = (static_cast<float>(rand()) / RAND_MAX - 0.5f) * 2.0f; float envelope = exp(-t * 20.0f); samples[i] = static_cast<std::int16_t>(25000.0f * noise * envelope); }
+    create_buffer("Machete_Swish", samples, 1, 44100);
+    samples.assign(44100 / 5, 0); for (size_t i = 0; i < samples.size(); ++i) { float t = static_cast<float>(i) / 44100.0f; float freq = 600.0f - t * 3000.0f; samples[i] = static_cast<std::int16_t>(22000.0f * sin(2 * 3.14159f * freq * t) * exp(-t * 20.0f)); }
+    create_buffer("Bat_Swish", samples, 1, 44100);
+    samples.assign(44100 / 6, 0); for (size_t i = 0; i < samples.size(); ++i) { float t = static_cast<float>(i) / 44100.0f; float freq = 800.0f - t * 2500.0f; samples[i] = static_cast<std::int16_t>(20000.0f * (sin(2 * 3.14159f * freq * t) + 0.2f * sin(2 * 3.14159f * freq * 2.5f * t)) * exp(-t * 30.0f)); }
+    create_buffer("Blunt_Metal_Swish", samples, 1, 44100);
+    samples.assign(44100, 0); for (size_t i = 0; i < samples.size(); ++i) { samples[i] = static_cast<std::int16_t>((static_cast<float>(rand()) / RAND_MAX - 0.5f) * 4000.0f); }
+    create_buffer("Shadow_Ambience", samples, 1, 44100);
 }
 
 void SoundEngine::run() {
     logError("DEBUG_LOG: run() started.");
     window.setVerticalSyncEnabled(true);
-    resetGame(); // Initialize the game state and level
+    resetGame();
     logError("DEBUG_LOG: resetGame() finished, starting main loop.");
 
     while (window.isOpen()) {
@@ -449,35 +490,34 @@ void SoundEngine::run() {
             if (isMoving && stepClock.getElapsedTime().asSeconds() > stepInterval) {
                 float volume = player->isCrouching ? 40.f : (player->isRunning ? 100.f : 80.f);
                 playSound("footstep", {0,0,0}, volume, true);
-
-                // --- Новая логика шума для стелс-системы ---
                 float noiseRadius = 0.0f;
                 if (player->isRunning) {
-                    noiseRadius = 25.0f; // Бег очень шумный
+                    noiseRadius = 25.0f;
                 } else if (player->isCrouching) {
-                    noiseRadius = 3.0f; // Красться почти бесшумно
+                    noiseRadius = 3.0f;
                 } else {
-                    noiseRadius = 10.0f; // Ходьба
+                    noiseRadius = 10.0f;
                 }
                 StealthSystem::processPlayerNoise(*player, enemies, noiseRadius);
-                // --- Конец новой логики ---
-
                 stepClock.restart();
             }
         } else if (gameState == GameState::PlayerDying) {
-            if (audioInitialized && playerDeathSound.getStatus() != sf::Sound::Status::Playing) {
+            static bool timerStarted = false;
+            static sf::Clock deathTimer;
+            if (!timerStarted) {
+                deathTimer.restart();
+                timerStarted = true;
+            }
+
+            if (deathTimer.getElapsedTime().asSeconds() > 2.5f) { // Wait for sound to play
                 gameState = GameState::GameOver;
-                lowHealthSound.stop(); detectionTickSound.stop();
-            } else if (!audioInitialized) {
-                // If there's no audio, just switch to game over after a short delay
-                static sf::Clock deathTimer;
-                if (deathTimer.getElapsedTime().asSeconds() > 2.0f) {
-                     gameState = GameState::GameOver;
-                }
+                alSourceStop(lowHealthSoundSource);
+                alSourceStop(shadowSoundSource);
+                timerStarted = false;
             }
         }
         render();
-        sf::sleep(sf::milliseconds(10)); // Increased sleep time to prevent race condition with test script
+        sf::sleep(sf::milliseconds(10));
     }
 }
 
@@ -542,7 +582,6 @@ bool SoundEngine::hasLineOfSightTo(const sf::Vector3f& target) {
     return true;
 }
 
-// ВЕРСИЯ ДЛЯ SFML 3.0
 void SoundEngine::processEvents() {
     while (auto event = window.pollEvent()) {
         if (event->is<sf::Event::Closed>()) {
@@ -572,7 +611,7 @@ void SoundEngine::processEvents() {
                     case sf::Keyboard::Key::Num2: player->switchWeapon(WeaponType::PISTOL); break;
                     case sf::Keyboard::Key::Num3: player->switchWeapon(WeaponType::TASER); break;
                     case sf::Keyboard::Key::Space: handlePlayerAttack(); break;
-                    case sf::Keyboard::Key::F: handlePlayerTakedown(); break; // <-- Новая строка
+                    case sf::Keyboard::Key::F: handlePlayerTakedown(); break;
                     case sf::Keyboard::Key::E: activateSonar(); break;
                     case sf::Keyboard::Key::G: player->godMode = !player->godMode; playSound("punch", {0,0,0}, 100.f, true); break;
                     default: break;
@@ -584,7 +623,6 @@ void SoundEngine::processEvents() {
     }
 }
 
-// ВЕРСИЯ ДЛЯ SFML 3.0
 bool SoundEngine::processInput(float deltaTime) {
     if (!player->isAlive || player->isStunned) return false;
     player->isRunning = sf::Keyboard::isKeyPressed(sf::Keyboard::Scan::LShift) || sf::Keyboard::isKeyPressed(sf::Keyboard::Scan::RShift);
@@ -623,6 +661,20 @@ bool SoundEngine::processInput(float deltaTime) {
 
 void SoundEngine::update(float deltaTime) {
     handleEnemyActions(deltaTime);
+
+    // Dynamic reverb logic
+    static bool in_cave = false; // simple state
+    bool currently_in_cave = (player->position.x > 50.f); // Define a "cave" area
+    if (currently_in_cave && !in_cave) {
+        setReverbPreset(EFX_REVERB_PRESET_CAVE);
+        logError("DEBUG_LOG: Switched to CAVE reverb preset.");
+        in_cave = true;
+    } else if (!currently_in_cave && in_cave) {
+        setReverbPreset(EFX_REVERB_PRESET_GENERIC);
+        logError("DEBUG_LOG: Switched to GENERIC reverb preset.");
+        in_cave = false;
+    }
+
     updateLowHealthSound();
     updateShadowSound();
     if (gameMode == GameMode::CLASSIC_ACTION) { updateProximitySonar(); }
@@ -636,23 +688,26 @@ void SoundEngine::updateShadowSound() {
     if (!audioInitialized) return;
 
     bool isInShadow = StealthSystem::isInShadow(player->position, shadowZones);
+    ALint sourceState;
+    alGetSourcei(shadowSoundSource, AL_SOURCE_STATE, &sourceState);
 
-    if (isInShadow && shadowSound.getStatus() != sf::Sound::Status::Playing) {
-        shadowSound.play();
-    } else if (!isInShadow && shadowSound.getStatus() == sf::Sound::Status::Playing) {
-        shadowSound.stop();
+    if (isInShadow && sourceState != AL_PLAYING) {
+        alSourcei(shadowSoundSource, AL_BUFFER, openalBuffers.at("Shadow_Ambience"));
+        alSourcef(shadowSoundSource, AL_GAIN, 30.0f / 100.f);
+        alSourcei(shadowSoundSource, AL_SOURCE_RELATIVE, AL_TRUE);
+        alSourcei(shadowSoundSource, AL_LOOPING, AL_TRUE);
+        alSourcePlay(shadowSoundSource);
+    } else if (!isInShadow && sourceState == AL_PLAYING) {
+        alSourceStop(shadowSoundSource);
+        alSourcei(shadowSoundSource, AL_BUFFER, 0);
     }
 }
 
-// ВЕРСИЯ ДЛЯ SFML 3.0
 void SoundEngine::generateLevel() {
     walls.clear();
     shadowZones.clear();
-
-    // Добавим несколько теневых зон для примера
     shadowZones.push_back(sf::FloatRect({-50.f, -50.f}, {20.f, 80.f}));
     shadowZones.push_back(sf::FloatRect({30.f, 20.f}, {50.f, 15.f}));
-
     for (int i = 0; i < settings.wallCount; ++i) {
         float w = getFloat(5.0f, 20.0f);
         float h = getFloat(5.0f, 20.0f);
@@ -668,16 +723,14 @@ void SoundEngine::generateLevel() {
     }
 }
 
-// ВЕРСИЯ ДЛЯ SFML 3.0
 void SoundEngine::resetGame() {
     logError("DEBUG_LOG: resetGame() started.");
     gameState = GameState::Playing;
     player->reset(settings);
     generateLevel();
-    sf::Listener::setDirection({0.f, 0.f, -1.f});
+    alListener3f(AL_DIRECTION, 0.f, 0.f, -1.f);
     enemies.clear();
     for (int i=0; i < INITIAL_NPC_COUNT; ++i) {
-        // Make every 4th Enemy a guard, the rest are regular prisoners
         NPCType type = (i % 4 == 0) ? NPCType::GUARD : NPCType::REGULAR;
         enemies.push_back(std::make_unique<Enemy>(sf::Vector3f(), type, settings));
     }
@@ -688,23 +741,17 @@ void SoundEngine::resetGame() {
         enemy->respawn(pos, settings);
     }
     gameClock.restart();
-    // window.requestFocus(); // This can cause a hang in headless environments like xvfb
 }
 
 void SoundEngine::handleEnemyActions(float deltaTime) {
     for (auto& enemy : enemies) {
         if (enemy->isAlive) {
-            // --- Новая логика обнаружения ---
             if (enemy->state != AIState::COMBAT) {
                 StealthSystem::updateDetection(*enemy, *player, walls, shadowZones, settings, deltaTime);
-
                 if (enemy->detectionLevel >= 100.f) {
                     onEnemySpottedPlayer(enemy.get(), true);
                 }
             }
-
-            // --- Существующая логика реакции на мертвые тела и помощь союзникам ---
-            // (можно оставить или улучшить)
             if (enemy->state != AIState::COMBAT && !enemy->hasReactedToDeath) {
                  for (const auto& other_enemy : enemies) {
                     if (!other_enemy->isAlive) {
@@ -721,19 +768,15 @@ void SoundEngine::handleEnemyActions(float deltaTime) {
                 for (const auto& other_enemy : enemies) {
                      if (other_enemy.get() != enemy.get() && other_enemy->isAlive && other_enemy->state == AIState::COMBAT) {
                         if (std::hypot(enemy->position.x - other_enemy->position.x, enemy->position.z - other_enemy->position.z) < 20.f) {
-                           onEnemySpottedPlayer(enemy.get(), true); // Вступаем в бой, если союзник рядом дерется
+                           onEnemySpottedPlayer(enemy.get(), true);
                            break;
                         }
                     }
                 }
             }
-
-            // Обновляем самого врага
             enemy->update(deltaTime, *player, *this, settings, gameMode, walls, enemies);
         }
     }
-
-    // Логика респавна
     for (auto& enemy : enemies) {
         if (enemy->canRespawn(settings.respawnTime)) {
             sf::Vector3f newPos;
@@ -745,12 +788,10 @@ void SoundEngine::handleEnemyActions(float deltaTime) {
 }
 
 void SoundEngine::handlePlayerAttack() {
-    if (!player->isAlive || player->isStunned) return; // Player cannot attack while stunned
+    if (!player->isAlive || player->isStunned) return;
     const auto& weapon = weapons.at(player->currentWeapon);
     if (player->lastAttackClock.getElapsedTime().asSeconds() < weapon.cooldown) return;
     player->lastAttackClock.restart();
-
-    // Find the best target first
     Enemy* bestTarget = nullptr;
     float minDistance = std::numeric_limits<float>::max();
     for(auto& enemy : enemies) {
@@ -762,13 +803,11 @@ void SoundEngine::handlePlayerAttack() {
             }
         }
     }
-
     playSound(weapon.soundName, {0,0,0}, weapon.volume, true);
-
     if (bestTarget) {
         if (player->currentWeapon == WeaponType::TASER) {
             if (minDistance < settings.taserRange) {
-                bestTarget->takeDamage(0, *this, player.get(), true); // 0 damage, guaranteed stun
+                bestTarget->takeDamage(0, *this, player.get(), true);
             }
         } else if ((player->currentWeapon == WeaponType::FIST && minDistance < 1.8f) || player->currentWeapon == WeaponType::PISTOL) {
             bestTarget->takeDamage(weapon.playerDamage, *this, player.get());
@@ -781,31 +820,21 @@ void SoundEngine::handlePlayerAttack() {
 
 void SoundEngine::handlePlayerTakedown() {
     if (!player->isAlive || player->isStunned) return;
-
-    // Ограничим частоту попыток, чтобы не спамить проверками
     if (player->lastAttackClock.getElapsedTime().asSeconds() < 0.5f) return;
     player->lastAttackClock.restart();
-
-    // Находим ближайшего врага
     Enemy* target = nullptr;
-    float minDistance = 1.5f; // Максимальная дистанция для тейкдауна
-
+    float minDistance = 1.5f;
     for (auto& enemy : enemies) {
         if (!enemy->isAlive || enemy->state == AIState::COMBAT) continue;
-
         float dist = std::hypot(player->position.x - enemy->position.x, player->position.z - enemy->position.z);
         if (dist < minDistance) {
-            // TODO: Проверить, находится ли игрок за спиной врага.
-            // Это потребует добавления информации о направлении взгляда врага.
-            // Пока что для теста будем считать, что любое близкое расстояние подходит.
             minDistance = dist;
             target = enemy.get();
         }
     }
-
     if (target) {
         playSound("takedown", target->position);
-        target->takeDamage(1000, *this, player.get()); // Наносим огромный урон для мгновенного убийства
+        target->takeDamage(1000, *this, player.get());
         if (!target->isAlive) {
             target->onDeath(*this);
         }
@@ -868,10 +897,18 @@ void SoundEngine::updateProximitySonar() {
 void SoundEngine::updateLowHealthSound() {
     if (!audioInitialized) return;
     bool isHealthLow = player->isAlive && (player->health <= settings.lowHealthThreshold);
-    if (isHealthLow && lowHealthSound.getStatus() != sf::Sound::Status::Playing) {
-        lowHealthSound.play();
-    } else if (!isHealthLow && lowHealthSound.getStatus() == sf::Sound::Status::Playing) {
-        lowHealthSound.stop();
+    ALint sourceState;
+    alGetSourcei(lowHealthSoundSource, AL_SOURCE_STATE, &sourceState);
+
+    if (isHealthLow && sourceState != AL_PLAYING) {
+        alSourcei(lowHealthSoundSource, AL_BUFFER, openalBuffers.at("LowHealth"));
+        alSourcef(lowHealthSoundSource, AL_GAIN, 80.0f / 100.f);
+        alSourcei(lowHealthSoundSource, AL_SOURCE_RELATIVE, AL_TRUE);
+        alSourcei(lowHealthSoundSource, AL_LOOPING, AL_TRUE);
+        alSourcePlay(lowHealthSoundSource);
+    } else if (!isHealthLow && sourceState == AL_PLAYING) {
+        alSourceStop(lowHealthSoundSource);
+        alSourcei(lowHealthSoundSource, AL_BUFFER, 0);
     }
 }
 
@@ -881,14 +918,12 @@ void SoundEngine::onEnemySpottedPlayer(Enemy* spottedBy, bool forceCombat) {
     spottedBy->state = AIState::COMBAT;
     spottedBy->detectionLevel = 0;
 
-    // 70% chance to play a battle cry
     if (getInt(1, 100) <= 70) {
         playSound("battle_cry", spottedBy->position, 100.f, false, getFloat(0.9f, 1.1f));
     }
 
-    if (audioInitialized) {
-        detectionTickSound.stop();
-    }
+    // Stop detection sound since combat has started
+    // This logic needs to be adapted for OpenAL sources
 }
 
 void SoundEngine::onEnemyDied(Enemy* deadEnemy) {
@@ -897,41 +932,33 @@ void SoundEngine::onEnemyDied(Enemy* deadEnemy) {
 
 void SoundEngine::playSound(const std::string& name, sf::Vector3f position, float volume, bool isListenerRelative, float pitch) {
     if (!audioInitialized) return;
-    auto it = soundBuffers.find(name);
-    if (it == soundBuffers.end() || it->second.getSampleCount() == 0) {
-        logError("Attempted to play sound that is not loaded or is empty: " + name);
+    auto it = openalBuffers.find(name);
+    if (it == openalBuffers.end()) {
+        logError("Attempted to play sound that is not loaded: " + name);
         return;
     }
 
     ALuint source = soundSources[currentSourceIndex];
-
-    // Останавливаем источник, если он еще играет
     alSourceStop(source);
-
-    // Отсоединяем предыдущий буфер
     alSourcei(source, AL_BUFFER, 0);
 
-    // Устанавливаем свойства
-    alSourcei(source, AL_BUFFER, openalBuffers.at(name));
+    alSourcei(source, AL_BUFFER, it->second);
     alSourcef(source, AL_PITCH, (pitch == -1.f) ? getFloat(0.95f, 1.05f) : pitch);
-    alSourcef(source, AL_GAIN, volume / 100.f); // Громкость в OpenAL от 0.0 до 1.0
+    alSourcef(source, AL_GAIN, volume / 100.f);
     alSourcei(source, AL_SOURCE_RELATIVE, isListenerRelative ? AL_TRUE : AL_FALSE);
 
     if (isListenerRelative) {
         alSource3f(source, AL_POSITION, 0, 0, 0);
-        // Отключаем реверберацию для звуков интерфейса
         alSource3i(source, AL_AUXILIARY_SEND_FILTER, AL_EFFECTSLOT_NULL, 0, AL_FILTER_NULL);
     } else {
         alSource3f(source, AL_POSITION, position.x, position.y, position.z);
-        alSourcef(source, AL_REFERENCE_DISTANCE, 4.0f); // Аналог setMinDistance
-        alSourcef(source, AL_ROLLOFF_FACTOR, 1.5f);     // Аналог setAttenuation
-        // Подключаем реверберацию для мировых звуков, если EFX доступен
+        alSourcef(source, AL_REFERENCE_DISTANCE, 4.0f);
+        alSourcef(source, AL_ROLLOFF_FACTOR, 1.5f);
         if (effectSlot != 0) {
             alSource3i(source, AL_AUXILIARY_SEND_FILTER, effectSlot, 0, AL_FILTER_NULL);
         }
     }
 
-    // Проверяем ошибки
     ALenum error = alGetError();
     if (error != AL_NO_ERROR) {
         logError("OpenAL error before playing sound " + name + ": " + std::to_string(error));
@@ -939,7 +966,6 @@ void SoundEngine::playSound(const std::string& name, sf::Vector3f position, floa
     }
 
     alSourcePlay(source);
-
     error = alGetError();
     if (error != AL_NO_ERROR) {
         logError("OpenAL error after playing sound " + name + ": " + std::to_string(error));
@@ -949,15 +975,12 @@ void SoundEngine::playSound(const std::string& name, sf::Vector3f position, floa
 }
 
 void SoundEngine::render() {
-    window.clear(sf::Color(10, 10, 20)); // Dark blue background
-
-    // --- Create a 2D view centered on the player ---
+    window.clear(sf::Color(10, 10, 20));
     sf::View view;
     view.setCenter({player->position.x, player->position.z});
-    view.setSize({80.f, 60.f}); // Zoom level
+    view.setSize({80.f, 60.f});
     window.setView(view);
 
-    // --- Draw Walls ---
     sf::RectangleShape wallShape;
     wallShape.setFillColor(sf::Color(100, 120, 140));
     for (const auto& wallRect : walls) {
@@ -966,7 +989,6 @@ void SoundEngine::render() {
         window.draw(wallShape);
     }
 
-    // --- Draw Enemies ---
     sf::CircleShape enemyShape(0.4f);
     for (const auto& enemy : enemies) {
         if (enemy->isAlive) {
@@ -982,7 +1004,6 @@ void SoundEngine::render() {
         }
     }
 
-    // --- Draw Player ---
     sf::CircleShape playerShape(0.4f);
     playerShape.setPosition({player->position.x - 0.4f, player->position.z - 0.4f});
     playerShape.setFillColor(sf::Color::Green);

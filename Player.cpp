@@ -3,6 +3,7 @@
 #include "Enemy.h"
 #include <algorithm> // For std::min
 #include <cmath> // For std::hypot
+#include <AL/al.h> // For alListener3f
 
 Player::Player(const GameSettings& settings) {
     reset(settings);
@@ -55,7 +56,7 @@ void Player::update(float deltaTime, const GameSettings& settings, const std::ve
 
 void Player::setPosition(const sf::Vector3f& newPos) {
     position = newPos;
-    sf::Listener::setPosition(position);
+    alListener3f(AL_POSITION, position.x, position.y, position.z);
 }
 
 void Player::switchWeapon(WeaponType newWeapon) {

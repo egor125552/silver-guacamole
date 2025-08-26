@@ -1,7 +1,7 @@
 #pragma once
 
 #include <SFML/Graphics.hpp>
-#include <SFML/Audio.hpp>
+// #include <SFML/Audio.hpp> // Removed for pure OpenAL implementation
 #include <vector>
 #include <string>
 #include <memory>
@@ -12,6 +12,7 @@
 #include <AL/alc.h>
 #include <AL/alext.h>
 #include <AL/efx.h>
+#include <AL/efx-presets.h>
 
 #include "common.h"
 #include "utils.h"
@@ -53,7 +54,11 @@ public:
     bool hasLineOfSightTo(const sf::Vector3f& target);
     
     const GameSettings& getSettings() const { return settings; }
+    void setReverbPreset(const EFXEAXREVERBPROPERTIES& preset);
 
+    // Public methods for testing
+    void _test_setPlayerPosition(const sf::Vector3f& pos);
+    void update(float deltaTime);
 private:
     // --- Основные компоненты ---
     sf::RenderWindow window;
@@ -80,18 +85,13 @@ private:
     ALuint effectSlot = 0;
 
     static constexpr size_t SOUND_POOL_SIZE = 64;
-    std::map<std::string, sf::SoundBuffer> soundBuffers;
     std::map<std::string, ALuint> openalBuffers;
     std::vector<ALuint> soundSources;
     size_t currentSourceIndex = 0;
-    sf::SoundBuffer dummyBuffer; // Для инициализации
 
-    // Специализированные звуки
-    sf::Sound playerDeathSound;
-    sf::Sound sonarSound;
-    sf::Sound lowHealthSound;
-    sf::Sound detectionTickSound;
-    sf::Sound shadowSound;
+    // Специализированные, постоянно играющие звуки
+    ALuint lowHealthSoundSource = 0;
+    ALuint shadowSoundSource = 0;
     
     // Таймеры для механик
     sf::Clock sonarClock;
@@ -111,7 +111,7 @@ private:
     // --- Основной игровой цикл ---
     void processEvents();
     bool processInput(float deltaTime);
-    void update(float deltaTime);
+    // void update(float deltaTime); // Moved to public
     void render();
     
     // --- Управление состоянием игры ---

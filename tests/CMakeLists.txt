@@ -16,6 +16,32 @@ FetchContent_MakeAvailable(googletest)
 # Включаем утилиты для тестирования Google Test
 include(GoogleTest)
 
-# На данный момент здесь больше ничего нет.
-# Исполняемые файлы тестов (add_executable) и их связь с Google Test (target_link_libraries)
-# будут добавлены на следующем шаге, когда мы будем писать сами тесты.
+# Создаем исполняемый файл для теста реверберации
+add_executable(
+    test_reverb
+    test_reverb.cpp
+    ../SoundEngine.cpp
+    ../Player.cpp
+    ../Enemy.cpp
+    ../Character.cpp
+    ../Stealth.cpp
+)
+
+# Линкуем тест с GTest и другими необходимыми библиотеками
+target_link_libraries(
+    test_reverb
+    PRIVATE
+    gtest_main
+    gmock
+    SFML::Graphics
+    SFML::Window
+    SFML::System
+    OpenAL::OpenAL
+    fmt::fmt
+    ogg
+    vorbis
+    vorbisfile
+)
+
+# Добавляем тест в систему CTest
+gtest_discover_tests(test_reverb)

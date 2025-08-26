@@ -271,41 +271,14 @@ CMakeFiles/StealthActionGame.dir/main.cpp.o: /app/main.cpp \
  /usr/local/include/SFML/System/FileInputStream.hpp \
  /usr/local/include/SFML/System/InputStream.hpp \
  /usr/local/include/SFML/System/MemoryInputStream.hpp \
- /usr/local/include/SFML/System/Sleep.hpp \
- /usr/local/include/SFML/Audio.hpp \
- /usr/local/include/SFML/Audio/InputSoundFile.hpp \
- /usr/local/include/SFML/Audio/Export.hpp \
- /usr/local/include/SFML/Audio/SoundFileReader.hpp \
- /usr/local/include/SFML/Audio/SoundChannel.hpp \
- /usr/local/include/SFML/Audio/Listener.hpp \
- /usr/local/include/SFML/Audio/Music.hpp \
- /usr/local/include/SFML/Audio/SoundStream.hpp \
- /usr/local/include/SFML/Audio/SoundSource.hpp \
- /usr/local/include/SFML/Audio/AudioResource.hpp \
- /usr/include/c++/13/functional /usr/include/c++/13/bits/std_function.h \
- /usr/include/c++/13/bits/stl_algo.h \
- /usr/include/c++/13/bits/algorithmfwd.h \
- /usr/include/c++/13/bits/stl_heap.h \
- /usr/include/c++/13/bits/uniform_int_dist.h \
- /usr/local/include/SFML/Audio/OutputSoundFile.hpp \
- /usr/local/include/SFML/Audio/SoundFileWriter.hpp \
- /usr/local/include/SFML/Audio/PlaybackDevice.hpp \
- /usr/local/include/SFML/Audio/Sound.hpp \
- /usr/local/include/SFML/Audio/SoundBuffer.hpp \
- /usr/include/c++/13/unordered_set \
- /usr/include/c++/13/bits/unordered_set.h \
- /usr/local/include/SFML/Audio/SoundBufferRecorder.hpp \
- /usr/local/include/SFML/Audio/SoundRecorder.hpp \
- /usr/local/include/SFML/Audio/SoundFileFactory.hpp \
- /usr/local/include/SFML/Audio/SoundFileFactory.inl \
- /usr/include/c++/13/map /usr/include/c++/13/bits/stl_tree.h \
- /usr/include/c++/13/bits/stl_map.h \
+ /usr/local/include/SFML/System/Sleep.hpp /usr/include/c++/13/map \
+ /usr/include/c++/13/bits/stl_tree.h /usr/include/c++/13/bits/stl_map.h \
  /usr/include/c++/13/bits/stl_multimap.h /usr/include/AL/al.h \
  /usr/include/AL/alc.h /usr/include/AL/alext.h /usr/include/AL/alc.h \
  /usr/include/AL/al.h /usr/include/AL/efx.h \
  /usr/lib/gcc/x86_64-linux-gnu/13/include/float.h /usr/include/AL/efx.h \
- /app/common.h /app/utils.h /usr/include/c++/13/random \
- /usr/include/c++/13/cmath /usr/include/math.h \
+ /usr/include/AL/efx-presets.h /app/common.h /app/utils.h \
+ /usr/include/c++/13/random /usr/include/c++/13/cmath /usr/include/math.h \
  /usr/include/x86_64-linux-gnu/bits/math-vector.h \
  /usr/include/x86_64-linux-gnu/bits/libm-simd-decl-stubs.h \
  /usr/include/x86_64-linux-gnu/bits/flt-eval-method.h \
@@ -328,10 +301,13 @@ CMakeFiles/StealthActionGame.dir/main.cpp.o: /app/main.cpp \
  /usr/include/c++/13/tr1/poly_laguerre.tcc \
  /usr/include/c++/13/tr1/riemann_zeta.tcc \
  /usr/include/c++/13/bits/random.h \
+ /usr/include/c++/13/bits/uniform_int_dist.h \
  /usr/include/x86_64-linux-gnu/c++/13/bits/opt_random.h \
  /usr/include/c++/13/bits/random.tcc /usr/include/c++/13/numeric \
  /usr/include/c++/13/bits/stl_numeric.h \
  /usr/include/c++/13/pstl/glue_numeric_defs.h \
- /usr/include/c++/13/algorithm \
+ /usr/include/c++/13/algorithm /usr/include/c++/13/bits/stl_algo.h \
+ /usr/include/c++/13/bits/algorithmfwd.h \
+ /usr/include/c++/13/bits/stl_heap.h \
  /usr/include/c++/13/pstl/glue_algorithm_defs.h /app/Stealth.h \
  /usr/include/c++/13/iostream

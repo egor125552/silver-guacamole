@@ -173,10 +173,10 @@ StealthActionGame: CMakeFiles/StealthActionGame.dir/Enemy.cpp.o
 StealthActionGame: CMakeFiles/StealthActionGame.dir/Stealth.cpp.o
 StealthActionGame: CMakeFiles/StealthActionGame.dir/build.make
 StealthActionGame: /usr/local/lib/libsfml-graphics-s.a
-StealthActionGame: /usr/local/lib/libsfml-audio-s.a
 StealthActionGame: /usr/local/lib/libsfml-window-s.a
 StealthActionGame: /usr/local/lib/libsfml-system-s.a
 StealthActionGame: /usr/lib/x86_64-linux-gnu/libopenal.so
+StealthActionGame: /usr/lib/x86_64-linux-gnu/libfmt.so.9.1.0
 StealthActionGame: /usr/lib/x86_64-linux-gnu/libXrandr.so
 StealthActionGame: /usr/lib/x86_64-linux-gnu/libXcursor.so
 StealthActionGame: /usr/lib/x86_64-linux-gnu/libXrender.so
@@ -187,11 +187,6 @@ StealthActionGame: /usr/lib/x86_64-linux-gnu/libX11.so
 StealthActionGame: /usr/lib/x86_64-linux-gnu/libGL.so
 StealthActionGame: /usr/lib/x86_64-linux-gnu/libudev.so
 StealthActionGame: /usr/lib/x86_64-linux-gnu/libfreetype.so
-StealthActionGame: /usr/lib/x86_64-linux-gnu/libvorbisfile.so
-StealthActionGame: /usr/lib/x86_64-linux-gnu/libvorbisenc.so
-StealthActionGame: /usr/lib/x86_64-linux-gnu/libvorbis.so
-StealthActionGame: /usr/lib/x86_64-linux-gnu/libogg.so
-StealthActionGame: /usr/lib/x86_64-linux-gnu/libFLAC.so
 StealthActionGame: CMakeFiles/StealthActionGame.dir/link.txt
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/app/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_7) "Linking CXX executable StealthActionGame"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/StealthActionGame.dir/link.txt --verbose=$(VERBOSE)
