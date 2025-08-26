@@ -1,71 +1,87 @@
 @echo off
-echo =======================================
-echo  BUILDING STEALTH ACTION GAME FOR WINDOWS
-echo =======================================
+setlocal
+
+echo =================================================
+echo  SBORKA I TESTIROVANIE "Stealth Action Game" (WINDOWS)
+echo =================================================
 echo.
 
-REM !!! IMPORTANT !!!
-REM Set the path to the root of your vcpkg installation directory.
-REM This is the directory that contains 'installed', 'scripts', etc.
-SET VCPKG_ROOT=C:\dev\vcpkg
-
-REM Set the path to your MinGW bin directory if it's not in your system's PATH
-REM Example: SET MINGW_PATH=C:\msys64\mingw64\bin
-REM SET PATH=%MINGW_PATH%;%PATH%
-
-echo --- Deleting old build directory...
-if exist build (
-    rmdir /s /q build
-    if errorlevel 1 (
-        echo Failed to delete build directory. It might be in use.
-        goto :error
-    )
-)
-
-echo --- Creating build directory...
-mkdir build
-if not exist build (
-    echo Failed to create build directory.
+REM --- Proverka zavisimostey ---
+where cmake >nul 2>nul
+if %errorlevel% neq 0 (
+    echo [OSHIBKA] Komanda 'cmake' ne naydena. Pozhaluysta, dobav'te CMake v peremennuyu sredy PATH.
     goto :error
 )
+echo CMake nayden.
+
+REM --- Podgotovka direktori sborki ---
+echo.
+echo --- Podgotovka direktori sborki...
+if exist build (
+    echo Udalenie staroy direktori sborki...
+    rmdir /s /q build
+)
+mkdir build
 cd build
 
-echo --- Configuring project with CMake...
-REM We point CMake to the vcpkg toolchain file.
-REM This automatically finds all libraries installed with vcpkg.
-SET VCPKG_TOOLCHAIN_FILE=%VCPKG_ROOT%\scripts\buildsystems\vcpkg.cmake
-cmake .. -G "MinGW Makefiles" -DCMAKE_TOOLCHAIN_FILE="%VCPKG_TOOLCHAIN_FILE%"
+REM --- Konfiguratsiya proekta cherez CMake ---
+echo.
+echo --- Konfiguratsiya proekta s pomoshch'yu CMake...
+REM Predpolagaetsya, chto pol'zovatel' uzhe vypolnil komandu 'vcpkg integrate install'.
+REM V etom sluchae CMake avtomaticheski naydet nuzhnyy toolchain-fayl ot vcpkg.
+cmake ..
 if %errorlevel% neq 0 (
+    echo [OSHIBKA] Oshibka konfiguratsii CMake.
     echo.
-    echo [ERROR] CMake configuration failed.
-    echo Check that VCPKG_ROOT is set correctly in this script.
-    echo Also ensure you have run 'vcpkg integrate install'.
+    echo Pozhaluysta, ubedites', chto vy odin raz vypolnili komandu 'vcpkg integrate install'.
+    echo Takzhe ubedites', chto vy ustanovili vse neobkhodimye biblioteki:
+    echo vcpkg install sfml openal-soft fmt libogg libvorbis gtest --triplet x64-windows
     goto :error
 )
 
-echo --- Compiling project with mingw32-make...
-REM You can add -j options to speed up compilation, e.g., mingw32-make -j8
-mingw32-make
+REM --- Sborka proekta ---
+echo.
+echo --- Kompilyatsiya proekta (Release)...
+cmake --build . --config Release
 if %errorlevel% neq 0 (
-    echo.
-    echo [ERROR] Compilation failed.
+    echo [OSHIBKA] Oshibka kompilyatsii.
     goto :error
+)
+
+REM --- Zapusk testov ---
+echo.
+echo --- Zapusk testov...
+REM CTest zapustit vse naydennye testy. Flazhok --output-on-failure ochen' polezen.
+ctest --config Release --output-on-failure
+if %errorlevel% neq 0 (
+    echo [PREDUPREZHDENIE] Odin ili neskol'ko testov provalilis'. Smotrite vyvod vyshe.
+    goto :error_but_built
 )
 
 echo.
 echo =======================================
-echo  BUILD SUCCESSFUL!
+echo  SBORKA I TESTY USPESHNO ZAVERSHENY!
 echo =======================================
-echo Executable is in the 'build' directory.
 cd ..
 goto :end
+
+:error_but_built
+echo.
+echo =======================================
+echo  SBORKA PROSHLA USPESHNO, NO TESTY PROVALILIS'.
+echo =======================================
+cd ..
+goto :end
+
 
 :error
 echo.
 echo =======================================
-echo  BUILD FAILED
+echo           SBORKA PROVALILAS'
 echo =======================================
-cd ..
+if exist build (
+    cd ..
+)
 
 :end
 echo.

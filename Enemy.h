@@ -34,11 +34,13 @@ private:
 
     void setNewRandomTarget(const GameSettings& settings);
     void move(sf::Vector3f direction, float speed, float deltaTime, const std::vector<sf::FloatRect>& walls);
+
+public:
+    // Public for testing purposes
     void updatePatrolling(float deltaTime, SoundEngine& engine, const std::vector<sf::FloatRect>& walls);
     void updateAlert(float deltaTime, SoundEngine& engine, const std::vector<sf::FloatRect>& walls);
     void updateCombat(float deltaTime, Player& player, SoundEngine& engine, const GameSettings& settings, const std::vector<sf::FloatRect>& walls, const std::vector<std::unique_ptr<Enemy>>& allEnemies);
 
-public:
     Enemy(sf::Vector3f startPos, NPCType npcType, const GameSettings& settings);
 
     // The main update function, delegates to state-specific updates

@@ -1,11 +1,7 @@
-[2025-08-26 13:49:46] DEBUG_LOG: Constructor start.
-[2025-08-26 13:49:46] DEBUG_LOG: Console setup.
-[2025-08-26 13:49:46] DEBUG_LOG: Settings loaded.
-[2025-08-26 13:49:46] AUDIO_ERROR: Failed to initialize sounds. Game will run without audio. Error: Failed to open OpenAL device
-[2025-08-26 13:49:46] DEBUG_LOG: Creating player...
-[2025-08-26 13:49:46] DEBUG_LOG: Player created.
-[2025-08-26 13:49:46] DEBUG_LOG: Weapon definitions loaded.
-[2025-08-26 13:49:46] DEBUG_LOG: Constructor end.
-[2025-08-26 13:49:46] DEBUG_LOG: run() started.
-[2025-08-26 13:49:46] DEBUG_LOG: resetGame() started.
-[2025-08-26 13:49:46] DEBUG_LOG: resetGame() finished, starting main loop.
+[2025-08-26 23:01:33] DEBUG_LOG: Constructor start.
+[2025-08-26 23:01:33] DEBUG_LOG: Console setup.
+[2025-08-26 23:01:33] DEBUG_LOG: Settings loaded.
+[2025-08-26 23:01:33] DEBUG_LOG: EFX extension found. Loading function pointers...
+[2025-08-26 23:01:33] DEBUG_LOG: EFX reverb effect created.
+[2025-08-26 23:01:33] DEBUG_LOG: OpenAL initialized successfully.
+[2025-08-26 23:01:33] DEBUG_LOG: Loading sounds...

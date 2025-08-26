@@ -386,40 +386,29 @@ void SoundEngine::loadSettings() {
 }
 
 void SoundEngine::loadSounds() {
-    const std::map<std::string, std::string> soundFileCategories = {
-        {"automatic", "combat"},
-        {"battle_cry", "alarm"},
-        {"boss_hit", "combat"},
-        {"death", "voice"},
-        {"footstep", "environment"},
-        {"hit", "combat"},
-        {"miss", "combat"},
-        {"pistol", "combat"},
-        {"player_death", "player"},
-        {"player_hit", "player"},
-        {"punch", "combat"},
-        {"reaction_panic", "alarm"},
-        {"sniper", "combat"},
-        {"sonar", "stealth"},
-        {"takedown", "stealth"},
-        {"ultimate", "combat"}
+    // This list should contain all the base sound names that are directly in the sounds/ directory.
+    const std::vector<std::string> soundNames = {
+        "automatic", "battle_cry", "boss_hit", "death", "footstep", "hit",
+        "miss", "pistol", "player_death", "player_hit", "punch",
+        "reaction_panic", "sniper", "sonar", "takedown", "ultimate"
     };
 
-    for (const auto& pair : soundFileCategories) {
-        const std::string& name = pair.first;
-        const std::string& category = pair.second;
-        std::string path = "sounds/" + category + "/" + name + ".ogg";
-
+    for (const auto& name : soundNames) {
+        std::string path = "sounds/" + name + ".ogg";
         try {
             openalBuffers[name] = load_ogg(path);
         } catch (const std::runtime_error& e) {
-            try {
-                std::string fallbackPath = "sounds/" + name + ".ogg";
-                openalBuffers[name] = load_ogg(fallbackPath);
-            } catch (const std::runtime_error& e2) {
-                throw std::runtime_error("Failed to load sound " + name + ": " + e.what());
-            }
+            // Re-throw with more context to make debugging easier.
+            throw std::runtime_error("Failed to load sound '" + name + "' from path '" + path + "'. Original error: " + e.what());
         }
+    }
+
+    // Manually load sounds from special subdirectories
+    try {
+        openalBuffers["guard_vs_lukashenko_main"] = load_ogg("sounds/guard_vs_lukashenko/main_event.ogg");
+        openalBuffers["prisoners_arguing_main"] = load_ogg("sounds/prisoners_arguing/main_event.ogg");
+    } catch (const std::runtime_error& e) {
+        throw std::runtime_error(std::string("Failed to load special event sound: ") + e.what());
     }
 }
 
@@ -931,6 +920,8 @@ void SoundEngine::onEnemyDied(Enemy* deadEnemy) {
 }
 
 void SoundEngine::playSound(const std::string& name, sf::Vector3f position, float volume, bool isListenerRelative, float pitch) {
+    // This log message is crucial for testing that sounds are being triggered.
+    logError("DEBUG_LOG: Playing sound " + name);
     if (!audioInitialized) return;
     auto it = openalBuffers.find(name);
     if (it == openalBuffers.end()) {

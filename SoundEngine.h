@@ -58,6 +58,8 @@ public:
 
     // Public methods for testing
     void _test_setPlayerPosition(const sf::Vector3f& pos);
+    const Player* getPlayer() const { return player.get(); }
+    const std::vector<std::unique_ptr<Enemy>>& getEnemies() const { return enemies; }
     void update(float deltaTime);
 private:
     // --- Основные компоненты ---
@@ -115,7 +117,9 @@ private:
     void render();
     
     // --- Управление состоянием игры ---
+public:
     void resetGame();
+private:
     void generateLevel();
 
     // --- Игровые механики ---

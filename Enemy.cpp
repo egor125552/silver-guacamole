@@ -147,6 +147,10 @@ void Enemy::updateCombat(float deltaTime, Player& player, SoundEngine& engine, c
         if (distanceToPlayer > meleeAttackRange) {
              sf::Vector3f direction = player.position - position;
              move(direction, runSpeed, deltaTime, walls);
+             if (stepClock.getElapsedTime().asSeconds() > RUN_STEP_INTERVAL) {
+                engine.playSound("footstep", position, 90.f);
+                stepClock.restart();
+            }
         } else if (lastAttackClock.getElapsedTime().asSeconds() > 1.2f) {
             lastAttackClock.restart();
             engine.playSound("punch", position);
