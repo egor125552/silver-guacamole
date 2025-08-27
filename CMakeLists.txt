@@ -38,16 +38,21 @@ set(GAME_LOGIC_SOURCES
 
 add_library(GameLogic STATIC ${GAME_LOGIC_SOURCES})
 
-# Приватные зависимости библиотеки
-target_link_libraries(GameLogic PRIVATE
-    SFML::Graphics
-    SFML::Window
-    SFML::System
-    OpenAL::OpenAL
-    fmt::fmt
-    ogg
-    vorbis
-    vorbisfile
+# Зависимости библиотеки
+target_link_libraries(GameLogic
+    # PUBLIC: Заголовки SFML используются в наших заголовках (SoundEngine.h),
+    # поэтому должны быть видны всем, кто использует GameLogic.
+    PUBLIC
+        SFML::Graphics
+        SFML::Window
+        SFML::System
+    # PRIVATE: Эти библиотеки используются только внутри .cpp файлов GameLogic.
+    PRIVATE
+        OpenAL::OpenAL
+        fmt::fmt
+        ogg
+        vorbis
+        vorbisfile
 )
 
 # Публичные зависимости (заголовки)
