@@ -7,6 +7,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(SFML_STATIC_LIBRARIES ON)
 find_package(SFML 3.0 REQUIRED COMPONENTS Graphics Window System)
 find_package(OpenAL REQUIRED)
+find_package(Ogg REQUIRED)
+find_package(Vorbis REQUIRED)
 
 # Используем FetchContent для управления зависимостью fmt
 include(FetchContent)
@@ -50,9 +52,8 @@ target_link_libraries(GameLogic
     PRIVATE
         OpenAL::OpenAL
         fmt::fmt
-        ogg
-        vorbis
-        vorbisfile
+        ${OGG_LIBRARIES}
+        ${VORBIS_LIBRARIES}
 )
 
 # Публичные зависимости (заголовки)
