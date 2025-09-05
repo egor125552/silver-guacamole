@@ -50,8 +50,9 @@ target_link_libraries(GameLogic
         SFML::System
     # PRIVATE: Эти библиотеки используются только внутри .cpp файлов GameLogic.
     PRIVATE
-        OpenAL::OpenAL
-        $<$<CONFIG:Debug>:fmtd>$<$<NOT:$<CONFIG:Debug>>:fmt>
+        # Hardcoding paths to bypass vcpkg integration issues for MinGW
+        "C:/dev/vcpkg/installed/x64-mingw-static/debug/lib/libOpenAL32.a"
+        "C:/dev/vcpkg/installed/x64-mingw-static/debug/lib/libfmtd.a"
         PkgConfig::OGG
         PkgConfig::VORBIS
 )
@@ -70,10 +71,13 @@ target_link_libraries(StealthActionGame PRIVATE GameLogic)
 # Для MinGW/Windows требуется явно линковать некоторые зависимости,
 # которые не подтягиваются автоматически через статическую библиотеку GameLogic.
 if(WIN32)
-    # Используем прямые имена ('fmt', 'avrt') вместо импортированных таргетов,
-    # так как это более надежно в данной среде.
-    # Для fmt используем генераторное выражение, чтобы выбрать debug/release версию.
-    target_link_libraries(StealthActionGame PRIVATE $<$<CONFIG:Debug>:fmtd>$<$<NOT:$<CONFIG:Debug>>:fmt> avrt)
+    # Hardcoding path to fmtd to bypass vcpkg integration issues.
+    # This is not portable, but necessary for this specific build environment.
+    # We re-link fmtd here to be absolutely sure it's available for the final link.
+    target_link_libraries(StealthActionGame PRIVATE
+        "C:/dev/vcpkg/installed/x64-mingw-static/debug/lib/libfmtd.a"
+        avrt
+    )
 endif()
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
