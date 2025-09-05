@@ -7,6 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(SFML_STATIC_LIBRARIES ON)
 find_package(SFML 3.0 REQUIRED COMPONENTS Graphics Window System)
 find_package(OpenAL REQUIRED)
+find_package(fmt REQUIRED)
 
 # --- Поиск Ogg/Vorbis через pkg-config ---
 # В некоторых средах стандартный find_package не может найти Ogg и Vorbis.
@@ -16,14 +17,7 @@ pkg_check_modules(OGG REQUIRED IMPORTED_TARGET ogg)
 pkg_check_modules(VORBIS REQUIRED IMPORTED_TARGET vorbis vorbisfile)
 
 
-# Используем FetchContent для управления зависимостью fmt
-include(FetchContent)
-FetchContent_Declare(
-  fmt
-  GIT_REPOSITORY https://github.com/fmtlib/fmt.git
-  GIT_TAG 9.1.0 # Используем свежую стабильную версию
-)
-FetchContent_MakeAvailable(fmt)
+# fmt, как и другие зависимости, будет найден через find_package
 
 # --- Библиотека игровой логики ---
 # Все основные файлы игры компилируются в статическую библиотеку.
@@ -72,6 +66,14 @@ target_compile_definitions(GameLogic INTERFACE SFML_STATIC)
 # Теперь он просто использует библиотеку GameLogic
 add_executable(StealthActionGame main.cpp)
 target_link_libraries(StealthActionGame PRIVATE GameLogic)
+
+# Для MinGW/Windows требуется явно линковать некоторые зависимости,
+# которые не подтягиваются автоматически через статическую библиотеку GameLogic.
+if(WIN32)
+    # fmt::fmt - решаем проблему "undefined reference to `fmt::`"
+    # avrt - решаем проблему "undefined reference to `Av...`"
+    target_link_libraries(StealthActionGame PRIVATE fmt::fmt avrt)
+endif()
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
