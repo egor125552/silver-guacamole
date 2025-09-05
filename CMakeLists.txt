@@ -51,7 +51,7 @@ target_link_libraries(GameLogic
     # PRIVATE: Эти библиотеки используются только внутри .cpp файлов GameLogic.
     PRIVATE
         OpenAL::OpenAL
-        fmt::fmt
+        fmt
         PkgConfig::OGG
         PkgConfig::VORBIS
 )
@@ -70,9 +70,9 @@ target_link_libraries(StealthActionGame PRIVATE GameLogic)
 # Для MinGW/Windows требуется явно линковать некоторые зависимости,
 # которые не подтягиваются автоматически через статическую библиотеку GameLogic.
 if(WIN32)
-    # fmt::fmt - решаем проблему "undefined reference to `fmt::`"
-    # avrt - решаем проблему "undefined reference to `Av...`"
-    target_link_libraries(StealthActionGame PRIVATE fmt::fmt avrt)
+    # Используем прямые имена ('fmt', 'avrt') вместо импортированных таргетов,
+    # так как это более надежно в данной среде.
+    target_link_libraries(StealthActionGame PRIVATE fmt avrt)
 endif()
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
