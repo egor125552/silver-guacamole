@@ -712,6 +712,11 @@ void SoundEngine::generateLevel() {
     }
 }
 
+// --- Test-only methods ---
+void SoundEngine::_test_setEnemies(std::vector<std::unique_ptr<Enemy>>&& newEnemies) {
+    enemies = std::move(newEnemies);
+}
+
 void SoundEngine::resetGame() {
     logError("DEBUG_LOG: resetGame() started.");
     gameState = GameState::Playing;

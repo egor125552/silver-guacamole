@@ -58,6 +58,7 @@ public:
 
     // Public methods for testing
     void _test_setPlayerPosition(const sf::Vector3f& pos);
+    void _test_setEnemies(std::vector<std::unique_ptr<Enemy>>&& newEnemies);
     const Player* getPlayer() const { return player.get(); }
     const std::vector<std::unique_ptr<Enemy>>& getEnemies() const { return enemies; }
     void update(float deltaTime);
@@ -123,8 +124,10 @@ private:
     void generateLevel();
 
     // --- Игровые механики ---
+public:
+    void handlePlayerAttack(); // Made public for testing
+private:
     void handleEnemyActions(float deltaTime);
-    void handlePlayerAttack();
     void handlePlayerTakedown();
     void activateSonar();
     void activateDirectionalSonar(int numpadKey);
