@@ -50,8 +50,9 @@ target_link_libraries(GameLogic
         SFML::System
     # PRIVATE: Эти библиотеки используются только внутри .cpp файлов GameLogic.
     PRIVATE
-        # Hardcoding paths to bypass vcpkg integration issues for MinGW
-        "C:/dev/vcpkg/installed/x64-mingw-static/debug/lib/libOpenAL32.a"
+        # Use OpenAL's imported target to handle its dependencies (like avrt) correctly.
+        OpenAL::OpenAL
+        # Hardcode the path to fmtd as it's the only reliable method in this environment.
         "C:/dev/vcpkg/installed/x64-mingw-static/debug/lib/libfmtd.a"
         PkgConfig::OGG
         PkgConfig::VORBIS
