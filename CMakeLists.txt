@@ -51,7 +51,7 @@ target_link_libraries(GameLogic
     # PRIVATE: Эти библиотеки используются только внутри .cpp файлов GameLogic.
     PRIVATE
         OpenAL::OpenAL
-        ${fmt_LIBRARIES}
+        $<$<CONFIG:Debug>:fmtd>$<$<NOT:$<CONFIG:Debug>>:fmt>
         PkgConfig::OGG
         PkgConfig::VORBIS
 )
@@ -72,7 +72,8 @@ target_link_libraries(StealthActionGame PRIVATE GameLogic)
 if(WIN32)
     # Используем прямые имена ('fmt', 'avrt') вместо импортированных таргетов,
     # так как это более надежно в данной среде.
-    target_link_libraries(StealthActionGame PRIVATE ${fmt_LIBRARIES} avrt)
+    # Для fmt используем генераторное выражение, чтобы выбрать debug/release версию.
+    target_link_libraries(StealthActionGame PRIVATE $<$<CONFIG:Debug>:fmtd>$<$<NOT:$<CONFIG:Debug>>:fmt> avrt)
 endif()
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
