@@ -9,15 +9,9 @@ find_package(SFML 3.0 REQUIRED COMPONENTS Graphics Window System)
 find_package(OpenAL REQUIRED)
 find_package(fmt REQUIRED)
 
-# --- Поиск Ogg/Vorbis через pkg-config ---
-# В некоторых средах стандартный find_package не может найти Ogg и Vorbis.
-# Использование pkg-config - более надежный метод для Linux.
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(OGG REQUIRED IMPORTED_TARGET ogg)
-pkg_check_modules(VORBIS REQUIRED IMPORTED_TARGET vorbis vorbisfile)
-
-
-# fmt, как и другие зависимости, будет найден через find_package
+# Windows-specific library finding
+find_package(Ogg REQUIRED)
+find_package(Vorbis REQUIRED)
 
 # --- Библиотека игровой логики ---
 # Все основные файлы игры компилируются в статическую библиотеку.
@@ -54,8 +48,8 @@ target_link_libraries(GameLogic
         OpenAL::OpenAL
         # Hardcode the path to fmtd as it's the only reliable method in this environment.
         "C:/dev/vcpkg/installed/x64-mingw-static/debug/lib/libfmtd.a"
-        PkgConfig::OGG
-        PkgConfig::VORBIS
+        ${OGG_LIBRARIES}
+        ${VORBIS_LIBRARIES}
 )
 
 # Публичные зависимости (заголовки)

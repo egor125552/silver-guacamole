@@ -44,7 +44,7 @@ void Player::update(float deltaTime, const GameSettings& settings, const std::ve
     }
 
     // Health regeneration logic
-    if (health < maxHealth && healthRegenDelayClock.getElapsedTime().asSeconds() > settings.healthRegenDelay) {
+    if (health < maxHealth && lastAttackClock.getElapsedTime().asSeconds() > settings.healthRegenDelay) {
         healthRegenBuffer += settings.healthRegenRate * deltaTime;
         if (healthRegenBuffer >= 1.0f) {
             int amountToHeal = static_cast<int>(healthRegenBuffer);
@@ -74,7 +74,7 @@ bool Player::takeDamage(int damage, SoundEngine& engine, Character* attacker, bo
         engine.playSound("Stun", {0,0,0}, 100.f, true);
     }
 
-    healthRegenDelayClock.restart();
+    lastAttackClock.restart(); // Resetting this clock starts the regeneration delay
     healthRegenBuffer = 0.0f;
     inCombatStance = true;
     timeSinceLastCombatEvent.restart();

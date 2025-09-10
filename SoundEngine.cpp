@@ -64,17 +64,23 @@ namespace {
         vorbis_info* vi = ov_info(&vf, -1);
         ALenum format = (vi->channels == 1) ? AL_FORMAT_MONO16 : AL_FORMAT_STEREO16;
 
-        int eof = 0;
         long total_size = 0;
         char pcmout[4096];
         std::vector<char> buffer_data;
 
-        while(!eof) {
-            long ret = ov_read(&vf, pcmout, sizeof(pcmout), 0, 2, 1, &eof);
+        while(true) {
+            // The last parameter is for the bitstream index, not an EOF flag.
+            // We pass nullptr as we don't need it.
+            // ov_read returns 0 on EOF, <0 on error, >0 on success.
+            long ret = ov_read(&vf, pcmout, sizeof(pcmout), 0, 2, 1, nullptr);
+
             if (ret < 0) {
                 ov_clear(&vf);
                 throw std::runtime_error("Error in the ogg stream: " + path);
-            } else if (ret > 0) {
+            } else if (ret == 0) {
+                // End of file
+                break;
+            } else {
                 buffer_data.insert(buffer_data.end(), pcmout, pcmout + ret);
                 total_size += ret;
             }
