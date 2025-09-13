@@ -14,4 +14,5 @@ public:
     // Новые методы
     virtual int getDamage() const = 0;
     virtual bool isStunWeapon() const = 0;
+    virtual bool isSilent() const { return false; }
 };

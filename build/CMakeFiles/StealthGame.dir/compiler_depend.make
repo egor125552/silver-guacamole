@@ -3,6 +3,10 @@
 
 CMakeFiles/StealthGame.dir/src/Enemy.cpp.o: /app/src/Enemy.cpp \
   /app/src/Enemy.h \
+  /app/src/Player.h \
+  /app/src/SoundEngine.h \
+  /app/src/Utils.h \
+  /app/src/Weapon.h \
   /usr/include/alloca.h \
   /usr/include/asm-generic/errno-base.h \
   /usr/include/asm-generic/errno.h \
@@ -11,6 +15,7 @@ CMakeFiles/StealthGame.dir/src/Enemy.cpp.o: /app/src/Enemy.cpp \
   /usr/include/c++/13/backward/auto_ptr.h \
   /usr/include/c++/13/backward/binders.h \
   /usr/include/c++/13/bit \
+  /usr/include/c++/13/bits/algorithmfwd.h \
   /usr/include/c++/13/bits/align.h \
   /usr/include/c++/13/bits/alloc_traits.h \
   /usr/include/c++/13/bits/allocated_ptr.h \
@@ -46,6 +51,7 @@ CMakeFiles/StealthGame.dir/src/Enemy.cpp.o: /app/src/Enemy.cpp \
   /usr/include/c++/13/bits/invoke.h \
   /usr/include/c++/13/bits/ios_base.h \
   /usr/include/c++/13/bits/istream.tcc \
+  /usr/include/c++/13/bits/list.tcc \
   /usr/include/c++/13/bits/locale_classes.h \
   /usr/include/c++/13/bits/locale_classes.tcc \
   /usr/include/c++/13/bits/locale_conv.h \
@@ -73,19 +79,27 @@ CMakeFiles/StealthGame.dir/src/Enemy.cpp.o: /app/src/Enemy.cpp \
   /usr/include/c++/13/bits/shared_ptr.h \
   /usr/include/c++/13/bits/shared_ptr_atomic.h \
   /usr/include/c++/13/bits/shared_ptr_base.h \
+  /usr/include/c++/13/bits/specfun.h \
   /usr/include/c++/13/bits/sstream.tcc \
   /usr/include/c++/13/bits/std_abs.h \
+  /usr/include/c++/13/bits/std_function.h \
+  /usr/include/c++/13/bits/stl_algo.h \
   /usr/include/c++/13/bits/stl_algobase.h \
   /usr/include/c++/13/bits/stl_bvector.h \
   /usr/include/c++/13/bits/stl_construct.h \
   /usr/include/c++/13/bits/stl_function.h \
+  /usr/include/c++/13/bits/stl_heap.h \
   /usr/include/c++/13/bits/stl_iterator.h \
   /usr/include/c++/13/bits/stl_iterator_base_funcs.h \
   /usr/include/c++/13/bits/stl_iterator_base_types.h \
+  /usr/include/c++/13/bits/stl_list.h \
+  /usr/include/c++/13/bits/stl_map.h \
+  /usr/include/c++/13/bits/stl_multimap.h \
   /usr/include/c++/13/bits/stl_pair.h \
   /usr/include/c++/13/bits/stl_raw_storage_iter.h \
   /usr/include/c++/13/bits/stl_relops.h \
   /usr/include/c++/13/bits/stl_tempbuf.h \
+  /usr/include/c++/13/bits/stl_tree.h \
   /usr/include/c++/13/bits/stl_uninitialized.h \
   /usr/include/c++/13/bits/stl_vector.h \
   /usr/include/c++/13/bits/stream_iterator.h \
@@ -93,8 +107,10 @@ CMakeFiles/StealthGame.dir/src/Enemy.cpp.o: /app/src/Enemy.cpp \
   /usr/include/c++/13/bits/streambuf_iterator.h \
   /usr/include/c++/13/bits/string_view.tcc \
   /usr/include/c++/13/bits/stringfwd.h \
+  /usr/include/c++/13/bits/uniform_int_dist.h \
   /usr/include/c++/13/bits/unique_ptr.h \
   /usr/include/c++/13/bits/unordered_map.h \
+  /usr/include/c++/13/bits/unordered_set.h \
   /usr/include/c++/13/bits/uses_allocator.h \
   /usr/include/c++/13/bits/uses_allocator_args.h \
   /usr/include/c++/13/bits/utility.h \
@@ -104,6 +120,7 @@ CMakeFiles/StealthGame.dir/src/Enemy.cpp.o: /app/src/Enemy.cpp \
   /usr/include/c++/13/cerrno \
   /usr/include/c++/13/chrono \
   /usr/include/c++/13/clocale \
+  /usr/include/c++/13/cmath \
   /usr/include/c++/13/codecvt \
   /usr/include/c++/13/compare \
   /usr/include/c++/13/cstddef \
@@ -124,6 +141,7 @@ CMakeFiles/StealthGame.dir/src/Enemy.cpp.o: /app/src/Enemy.cpp \
   /usr/include/c++/13/ext/string_conversions.h \
   /usr/include/c++/13/ext/type_traits.h \
   /usr/include/c++/13/filesystem \
+  /usr/include/c++/13/functional \
   /usr/include/c++/13/initializer_list \
   /usr/include/c++/13/iomanip \
   /usr/include/c++/13/ios \
@@ -132,7 +150,9 @@ CMakeFiles/StealthGame.dir/src/Enemy.cpp.o: /app/src/Enemy.cpp \
   /usr/include/c++/13/istream \
   /usr/include/c++/13/iterator \
   /usr/include/c++/13/limits \
+  /usr/include/c++/13/list \
   /usr/include/c++/13/locale \
+  /usr/include/c++/13/map \
   /usr/include/c++/13/memory \
   /usr/include/c++/13/new \
   /usr/include/c++/13/optional \
@@ -147,10 +167,23 @@ CMakeFiles/StealthGame.dir/src/Enemy.cpp.o: /app/src/Enemy.cpp \
   /usr/include/c++/13/string \
   /usr/include/c++/13/string_view \
   /usr/include/c++/13/system_error \
+  /usr/include/c++/13/tr1/bessel_function.tcc \
+  /usr/include/c++/13/tr1/beta_function.tcc \
+  /usr/include/c++/13/tr1/ell_integral.tcc \
+  /usr/include/c++/13/tr1/exp_integral.tcc \
+  /usr/include/c++/13/tr1/gamma.tcc \
+  /usr/include/c++/13/tr1/hypergeometric.tcc \
+  /usr/include/c++/13/tr1/legendre_function.tcc \
+  /usr/include/c++/13/tr1/modified_bessel_func.tcc \
+  /usr/include/c++/13/tr1/poly_hermite.tcc \
+  /usr/include/c++/13/tr1/poly_laguerre.tcc \
+  /usr/include/c++/13/tr1/riemann_zeta.tcc \
+  /usr/include/c++/13/tr1/special_function_util.h \
   /usr/include/c++/13/tuple \
   /usr/include/c++/13/type_traits \
   /usr/include/c++/13/typeinfo \
   /usr/include/c++/13/unordered_map \
+  /usr/include/c++/13/unordered_set \
   /usr/include/c++/13/utility \
   /usr/include/c++/13/variant \
   /usr/include/c++/13/vector \
@@ -162,6 +195,7 @@ CMakeFiles/StealthGame.dir/src/Enemy.cpp.o: /app/src/Enemy.cpp \
   /usr/include/libintl.h \
   /usr/include/linux/errno.h \
   /usr/include/locale.h \
+  /usr/include/math.h \
   /usr/include/pthread.h \
   /usr/include/sched.h \
   /usr/include/stdc-predef.h \
@@ -180,9 +214,18 @@ CMakeFiles/StealthGame.dir/src/Enemy.cpp.o: /app/src/Enemy.cpp \
   /usr/include/x86_64-linux-gnu/bits/errno.h \
   /usr/include/x86_64-linux-gnu/bits/floatn-common.h \
   /usr/include/x86_64-linux-gnu/bits/floatn.h \
+  /usr/include/x86_64-linux-gnu/bits/flt-eval-method.h \
+  /usr/include/x86_64-linux-gnu/bits/fp-fast.h \
+  /usr/include/x86_64-linux-gnu/bits/fp-logb.h \
+  /usr/include/x86_64-linux-gnu/bits/iscanonical.h \
   /usr/include/x86_64-linux-gnu/bits/libc-header-start.h \
+  /usr/include/x86_64-linux-gnu/bits/libm-simd-decl-stubs.h \
   /usr/include/x86_64-linux-gnu/bits/locale.h \
   /usr/include/x86_64-linux-gnu/bits/long-double.h \
+  /usr/include/x86_64-linux-gnu/bits/math-vector.h \
+  /usr/include/x86_64-linux-gnu/bits/mathcalls-helper-functions.h \
+  /usr/include/x86_64-linux-gnu/bits/mathcalls-narrow.h \
+  /usr/include/x86_64-linux-gnu/bits/mathcalls.h \
   /usr/include/x86_64-linux-gnu/bits/pthread_stack_min-dynamic.h \
   /usr/include/x86_64-linux-gnu/bits/pthreadtypes-arch.h \
   /usr/include/x86_64-linux-gnu/bits/pthreadtypes.h \
@@ -255,6 +298,25 @@ CMakeFiles/StealthGame.dir/src/Enemy.cpp.o: /app/src/Enemy.cpp \
   /usr/lib/gcc/x86_64-linux-gnu/13/include/stdarg.h \
   /usr/lib/gcc/x86_64-linux-gnu/13/include/stddef.h \
   /usr/lib/gcc/x86_64-linux-gnu/13/include/stdint.h \
+  /usr/local/include/SFML/Audio.hpp \
+  /usr/local/include/SFML/Audio/AudioResource.hpp \
+  /usr/local/include/SFML/Audio/Export.hpp \
+  /usr/local/include/SFML/Audio/InputSoundFile.hpp \
+  /usr/local/include/SFML/Audio/Listener.hpp \
+  /usr/local/include/SFML/Audio/Music.hpp \
+  /usr/local/include/SFML/Audio/OutputSoundFile.hpp \
+  /usr/local/include/SFML/Audio/PlaybackDevice.hpp \
+  /usr/local/include/SFML/Audio/Sound.hpp \
+  /usr/local/include/SFML/Audio/SoundBuffer.hpp \
+  /usr/local/include/SFML/Audio/SoundBufferRecorder.hpp \
+  /usr/local/include/SFML/Audio/SoundChannel.hpp \
+  /usr/local/include/SFML/Audio/SoundFileFactory.hpp \
+  /usr/local/include/SFML/Audio/SoundFileFactory.inl \
+  /usr/local/include/SFML/Audio/SoundFileReader.hpp \
+  /usr/local/include/SFML/Audio/SoundFileWriter.hpp \
+  /usr/local/include/SFML/Audio/SoundRecorder.hpp \
+  /usr/local/include/SFML/Audio/SoundSource.hpp \
+  /usr/local/include/SFML/Audio/SoundStream.hpp \
   /usr/local/include/SFML/Config.hpp \
   /usr/local/include/SFML/Graphics.hpp \
   /usr/local/include/SFML/Graphics/BlendMode.hpp \
@@ -1582,6 +1644,8 @@ CMakeFiles/StealthGame.dir/src/Player.cpp.o: /app/src/Player.cpp \
   /app/src/Pistol.h \
   /app/src/Player.h \
   /app/src/Shocker.h \
+  /app/src/SoundEngine.h \
+  /app/src/Utils.h \
   /app/src/Weapon.h \
   /usr/include/alloca.h \
   /usr/include/asm-generic/errno-base.h \
@@ -1591,6 +1655,7 @@ CMakeFiles/StealthGame.dir/src/Player.cpp.o: /app/src/Player.cpp \
   /usr/include/c++/13/backward/auto_ptr.h \
   /usr/include/c++/13/backward/binders.h \
   /usr/include/c++/13/bit \
+  /usr/include/c++/13/bits/algorithmfwd.h \
   /usr/include/c++/13/bits/align.h \
   /usr/include/c++/13/bits/alloc_traits.h \
   /usr/include/c++/13/bits/allocated_ptr.h \
@@ -1626,6 +1691,7 @@ CMakeFiles/StealthGame.dir/src/Player.cpp.o: /app/src/Player.cpp \
   /usr/include/c++/13/bits/invoke.h \
   /usr/include/c++/13/bits/ios_base.h \
   /usr/include/c++/13/bits/istream.tcc \
+  /usr/include/c++/13/bits/list.tcc \
   /usr/include/c++/13/bits/locale_classes.h \
   /usr/include/c++/13/bits/locale_classes.tcc \
   /usr/include/c++/13/bits/locale_conv.h \
@@ -1653,19 +1719,27 @@ CMakeFiles/StealthGame.dir/src/Player.cpp.o: /app/src/Player.cpp \
   /usr/include/c++/13/bits/shared_ptr.h \
   /usr/include/c++/13/bits/shared_ptr_atomic.h \
   /usr/include/c++/13/bits/shared_ptr_base.h \
+  /usr/include/c++/13/bits/specfun.h \
   /usr/include/c++/13/bits/sstream.tcc \
   /usr/include/c++/13/bits/std_abs.h \
+  /usr/include/c++/13/bits/std_function.h \
+  /usr/include/c++/13/bits/stl_algo.h \
   /usr/include/c++/13/bits/stl_algobase.h \
   /usr/include/c++/13/bits/stl_bvector.h \
   /usr/include/c++/13/bits/stl_construct.h \
   /usr/include/c++/13/bits/stl_function.h \
+  /usr/include/c++/13/bits/stl_heap.h \
   /usr/include/c++/13/bits/stl_iterator.h \
   /usr/include/c++/13/bits/stl_iterator_base_funcs.h \
   /usr/include/c++/13/bits/stl_iterator_base_types.h \
+  /usr/include/c++/13/bits/stl_list.h \
+  /usr/include/c++/13/bits/stl_map.h \
+  /usr/include/c++/13/bits/stl_multimap.h \
   /usr/include/c++/13/bits/stl_pair.h \
   /usr/include/c++/13/bits/stl_raw_storage_iter.h \
   /usr/include/c++/13/bits/stl_relops.h \
   /usr/include/c++/13/bits/stl_tempbuf.h \
+  /usr/include/c++/13/bits/stl_tree.h \
   /usr/include/c++/13/bits/stl_uninitialized.h \
   /usr/include/c++/13/bits/stl_vector.h \
   /usr/include/c++/13/bits/stream_iterator.h \
@@ -1673,8 +1747,10 @@ CMakeFiles/StealthGame.dir/src/Player.cpp.o: /app/src/Player.cpp \
   /usr/include/c++/13/bits/streambuf_iterator.h \
   /usr/include/c++/13/bits/string_view.tcc \
   /usr/include/c++/13/bits/stringfwd.h \
+  /usr/include/c++/13/bits/uniform_int_dist.h \
   /usr/include/c++/13/bits/unique_ptr.h \
   /usr/include/c++/13/bits/unordered_map.h \
+  /usr/include/c++/13/bits/unordered_set.h \
   /usr/include/c++/13/bits/uses_allocator.h \
   /usr/include/c++/13/bits/uses_allocator_args.h \
   /usr/include/c++/13/bits/utility.h \
@@ -1684,6 +1760,7 @@ CMakeFiles/StealthGame.dir/src/Player.cpp.o: /app/src/Player.cpp \
   /usr/include/c++/13/cerrno \
   /usr/include/c++/13/chrono \
   /usr/include/c++/13/clocale \
+  /usr/include/c++/13/cmath \
   /usr/include/c++/13/codecvt \
   /usr/include/c++/13/compare \
   /usr/include/c++/13/cstddef \
@@ -1704,6 +1781,7 @@ CMakeFiles/StealthGame.dir/src/Player.cpp.o: /app/src/Player.cpp \
   /usr/include/c++/13/ext/string_conversions.h \
   /usr/include/c++/13/ext/type_traits.h \
   /usr/include/c++/13/filesystem \
+  /usr/include/c++/13/functional \
   /usr/include/c++/13/initializer_list \
   /usr/include/c++/13/iomanip \
   /usr/include/c++/13/ios \
@@ -1712,7 +1790,9 @@ CMakeFiles/StealthGame.dir/src/Player.cpp.o: /app/src/Player.cpp \
   /usr/include/c++/13/istream \
   /usr/include/c++/13/iterator \
   /usr/include/c++/13/limits \
+  /usr/include/c++/13/list \
   /usr/include/c++/13/locale \
+  /usr/include/c++/13/map \
   /usr/include/c++/13/memory \
   /usr/include/c++/13/new \
   /usr/include/c++/13/optional \
@@ -1727,10 +1807,23 @@ CMakeFiles/StealthGame.dir/src/Player.cpp.o: /app/src/Player.cpp \
   /usr/include/c++/13/string \
   /usr/include/c++/13/string_view \
   /usr/include/c++/13/system_error \
+  /usr/include/c++/13/tr1/bessel_function.tcc \
+  /usr/include/c++/13/tr1/beta_function.tcc \
+  /usr/include/c++/13/tr1/ell_integral.tcc \
+  /usr/include/c++/13/tr1/exp_integral.tcc \
+  /usr/include/c++/13/tr1/gamma.tcc \
+  /usr/include/c++/13/tr1/hypergeometric.tcc \
+  /usr/include/c++/13/tr1/legendre_function.tcc \
+  /usr/include/c++/13/tr1/modified_bessel_func.tcc \
+  /usr/include/c++/13/tr1/poly_hermite.tcc \
+  /usr/include/c++/13/tr1/poly_laguerre.tcc \
+  /usr/include/c++/13/tr1/riemann_zeta.tcc \
+  /usr/include/c++/13/tr1/special_function_util.h \
   /usr/include/c++/13/tuple \
   /usr/include/c++/13/type_traits \
   /usr/include/c++/13/typeinfo \
   /usr/include/c++/13/unordered_map \
+  /usr/include/c++/13/unordered_set \
   /usr/include/c++/13/utility \
   /usr/include/c++/13/variant \
   /usr/include/c++/13/vector \
@@ -1742,6 +1835,7 @@ CMakeFiles/StealthGame.dir/src/Player.cpp.o: /app/src/Player.cpp \
   /usr/include/libintl.h \
   /usr/include/linux/errno.h \
   /usr/include/locale.h \
+  /usr/include/math.h \
   /usr/include/pthread.h \
   /usr/include/sched.h \
   /usr/include/stdc-predef.h \
@@ -1760,9 +1854,18 @@ CMakeFiles/StealthGame.dir/src/Player.cpp.o: /app/src/Player.cpp \
   /usr/include/x86_64-linux-gnu/bits/errno.h \
   /usr/include/x86_64-linux-gnu/bits/floatn-common.h \
   /usr/include/x86_64-linux-gnu/bits/floatn.h \
+  /usr/include/x86_64-linux-gnu/bits/flt-eval-method.h \
+  /usr/include/x86_64-linux-gnu/bits/fp-fast.h \
+  /usr/include/x86_64-linux-gnu/bits/fp-logb.h \
+  /usr/include/x86_64-linux-gnu/bits/iscanonical.h \
   /usr/include/x86_64-linux-gnu/bits/libc-header-start.h \
+  /usr/include/x86_64-linux-gnu/bits/libm-simd-decl-stubs.h \
   /usr/include/x86_64-linux-gnu/bits/locale.h \
   /usr/include/x86_64-linux-gnu/bits/long-double.h \
+  /usr/include/x86_64-linux-gnu/bits/math-vector.h \
+  /usr/include/x86_64-linux-gnu/bits/mathcalls-helper-functions.h \
+  /usr/include/x86_64-linux-gnu/bits/mathcalls-narrow.h \
+  /usr/include/x86_64-linux-gnu/bits/mathcalls.h \
   /usr/include/x86_64-linux-gnu/bits/pthread_stack_min-dynamic.h \
   /usr/include/x86_64-linux-gnu/bits/pthreadtypes-arch.h \
   /usr/include/x86_64-linux-gnu/bits/pthreadtypes.h \
@@ -1835,6 +1938,25 @@ CMakeFiles/StealthGame.dir/src/Player.cpp.o: /app/src/Player.cpp \
   /usr/lib/gcc/x86_64-linux-gnu/13/include/stdarg.h \
   /usr/lib/gcc/x86_64-linux-gnu/13/include/stddef.h \
   /usr/lib/gcc/x86_64-linux-gnu/13/include/stdint.h \
+  /usr/local/include/SFML/Audio.hpp \
+  /usr/local/include/SFML/Audio/AudioResource.hpp \
+  /usr/local/include/SFML/Audio/Export.hpp \
+  /usr/local/include/SFML/Audio/InputSoundFile.hpp \
+  /usr/local/include/SFML/Audio/Listener.hpp \
+  /usr/local/include/SFML/Audio/Music.hpp \
+  /usr/local/include/SFML/Audio/OutputSoundFile.hpp \
+  /usr/local/include/SFML/Audio/PlaybackDevice.hpp \
+  /usr/local/include/SFML/Audio/Sound.hpp \
+  /usr/local/include/SFML/Audio/SoundBuffer.hpp \
+  /usr/local/include/SFML/Audio/SoundBufferRecorder.hpp \
+  /usr/local/include/SFML/Audio/SoundChannel.hpp \
+  /usr/local/include/SFML/Audio/SoundFileFactory.hpp \
+  /usr/local/include/SFML/Audio/SoundFileFactory.inl \
+  /usr/local/include/SFML/Audio/SoundFileReader.hpp \
+  /usr/local/include/SFML/Audio/SoundFileWriter.hpp \
+  /usr/local/include/SFML/Audio/SoundRecorder.hpp \
+  /usr/local/include/SFML/Audio/SoundSource.hpp \
+  /usr/local/include/SFML/Audio/SoundStream.hpp \
   /usr/local/include/SFML/Config.hpp \
   /usr/local/include/SFML/Graphics.hpp \
   /usr/local/include/SFML/Graphics/BlendMode.hpp \
@@ -2917,42 +3039,6 @@ CMakeFiles/StealthGame.dir/src/main.cpp.o: /app/src/main.cpp \
 
 /app/src/Machete.cpp:
 
-/usr/local/include/SFML/Audio/SoundSource.hpp:
-
-/usr/local/include/SFML/Audio/SoundFileWriter.hpp:
-
-/usr/local/include/SFML/Audio/SoundFileFactory.inl:
-
-/usr/local/include/SFML/Audio/SoundFileFactory.hpp:
-
-/usr/local/include/SFML/Audio/SoundChannel.hpp:
-
-/usr/local/include/SFML/Audio/SoundBufferRecorder.hpp:
-
-/usr/local/include/SFML/Audio/SoundBuffer.hpp:
-
-/usr/local/include/SFML/Audio/PlaybackDevice.hpp:
-
-/usr/local/include/SFML/Audio/OutputSoundFile.hpp:
-
-/usr/local/include/SFML/Audio/Music.hpp:
-
-/usr/local/include/SFML/Audio/Listener.hpp:
-
-/usr/local/include/SFML/Audio/InputSoundFile.hpp:
-
-/usr/local/include/SFML/Audio/AudioResource.hpp:
-
-/usr/local/include/SFML/Audio.hpp:
-
-/usr/include/c++/13/functional:
-
-/usr/include/c++/13/bits/unordered_set.h:
-
-/usr/include/c++/13/bits/stl_map.h:
-
-/usr/include/c++/13/bits/stl_algo.h:
-
 /app/src/Fists.cpp:
 
 /usr/local/include/SFML/Window/WindowHandle.hpp:
@@ -2962,8 +3048,6 @@ CMakeFiles/StealthGame.dir/src/main.cpp.o: /app/src/main.cpp \
 /usr/local/include/SFML/Window/VideoMode.hpp:
 
 /usr/local/include/SFML/Window/Touch.hpp:
-
-/usr/local/include/SFML/Window/Event.inl:
 
 /usr/local/include/SFML/Window/ContextSettings.hpp:
 
@@ -2997,10 +3081,6 @@ CMakeFiles/StealthGame.dir/src/main.cpp.o: /app/src/main.cpp \
 
 /usr/local/include/SFML/System/Err.hpp:
 
-/app/src/SoundEngine.h:
-
-/usr/local/include/SFML/System/Angle.hpp:
-
 /usr/local/include/SFML/System.hpp:
 
 /usr/local/include/SFML/Graphics/VertexArray.hpp:
@@ -3015,10 +3095,6 @@ CMakeFiles/StealthGame.dir/src/main.cpp.o: /app/src/main.cpp \
 
 /usr/local/include/SFML/Graphics/Text.hpp:
 
-/usr/local/include/SFML/Audio/SoundFileReader.hpp:
-
-/usr/local/include/SFML/Graphics/StencilMode.hpp:
-
 /usr/local/include/SFML/Graphics/Shape.hpp:
 
 /usr/local/include/SFML/Graphics/RenderTexture.hpp:
@@ -3030,10 +3106,6 @@ CMakeFiles/StealthGame.dir/src/main.cpp.o: /app/src/main.cpp \
 /app/src/Pistol.h:
 
 /usr/local/include/SFML/Graphics/Rect.inl:
-
-/usr/local/include/SFML/Audio/SoundStream.hpp:
-
-/usr/local/include/SFML/Graphics/Rect.hpp:
 
 /usr/local/include/SFML/Graphics/PrimitiveType.hpp:
 
@@ -3053,53 +3125,113 @@ CMakeFiles/StealthGame.dir/src/main.cpp.o: /app/src/main.cpp \
 
 /usr/local/include/SFML/Graphics/CircleShape.hpp:
 
-/usr/include/c++/13/iomanip:
-
-/usr/include/c++/13/bits/uses_allocator.h:
-
-/usr/include/c++/13/bits/postypes.h:
-
-/usr/include/c++/13/initializer_list:
-
-/usr/include/c++/13/filesystem:
-
-/usr/include/c++/13/ext/type_traits.h:
-
-/usr/include/c++/13/ext/string_conversions.h:
-
-/usr/include/x86_64-linux-gnu/bits/types/sigset_t.h:
+/usr/local/include/SFML/Graphics/BlendMode.hpp:
 
 /usr/local/include/SFML/Graphics.hpp:
 
-/usr/include/c++/13/ext/concurrence.h:
+/usr/local/include/SFML/Graphics/Rect.hpp:
 
-/usr/include/c++/13/cctype:
+/usr/local/include/SFML/Audio/SoundStream.hpp:
 
-/usr/local/include/SFML/Graphics/View.hpp:
+/usr/local/include/SFML/Audio/SoundSource.hpp:
 
-/usr/include/c++/13/debug/assertions.h:
+/usr/local/include/SFML/Audio/SoundFileWriter.hpp:
+
+/usr/local/include/SFML/Graphics/StencilMode.hpp:
+
+/usr/local/include/SFML/Audio/SoundFileReader.hpp:
+
+/usr/local/include/SFML/Audio/SoundFileFactory.inl:
+
+/usr/local/include/SFML/Audio/SoundChannel.hpp:
+
+/usr/local/include/SFML/Audio/SoundBufferRecorder.hpp:
+
+/usr/local/include/SFML/Audio/SoundBuffer.hpp:
+
+/usr/local/include/SFML/Audio/PlaybackDevice.hpp:
+
+/usr/local/include/SFML/Audio/OutputSoundFile.hpp:
+
+/usr/local/include/SFML/Audio/Music.hpp:
+
+/usr/local/include/SFML/Audio/Listener.hpp:
+
+/usr/local/include/SFML/Audio/InputSoundFile.hpp:
+
+/usr/local/include/SFML/Audio/AudioResource.hpp:
+
+/usr/local/include/SFML/Audio.hpp:
+
+/usr/local/include/SFML/Window/Sensor.hpp:
+
+/usr/lib/gcc/x86_64-linux-gnu/13/include/stdint.h:
+
+/usr/lib/gcc/x86_64-linux-gnu/13/include/stddef.h:
+
+/usr/lib/gcc/x86_64-linux-gnu/13/include/stdarg.h:
+
+/usr/local/include/SFML/Window/Context.hpp:
+
+/usr/include/x86_64-linux-gnu/sys/single_threaded.h:
+
+/usr/include/x86_64-linux-gnu/sys/cdefs.h:
+
+/usr/include/x86_64-linux-gnu/gnu/stubs.h:
+
+/usr/include/x86_64-linux-gnu/c++/13/bits/time_members.h:
+
+/usr/include/x86_64-linux-gnu/c++/13/bits/os_defines.h:
+
+/usr/include/x86_64-linux-gnu/c++/13/bits/messages_members.h:
+
+/app/src/Player.cpp:
+
+/usr/include/x86_64-linux-gnu/c++/13/bits/gthr.h:
+
+/usr/include/x86_64-linux-gnu/c++/13/bits/error_constants.h:
+
+/usr/local/include/SFML/System/Clock.hpp:
+
+/usr/local/include/SFML/Graphics/RectangleShape.hpp:
+
+/usr/include/x86_64-linux-gnu/c++/13/bits/ctype_base.h:
+
+/usr/include/x86_64-linux-gnu/c++/13/bits/cpu_defines.h:
+
+/usr/include/x86_64-linux-gnu/c++/13/bits/c++locale.h:
+
+/usr/include/x86_64-linux-gnu/c++/13/bits/c++config.h:
+
+/usr/include/x86_64-linux-gnu/c++/13/bits/atomic_word.h:
+
+/usr/include/x86_64-linux-gnu/bits/wordsize.h:
+
+/usr/include/x86_64-linux-gnu/bits/wctype-wchar.h:
+
+/usr/include/x86_64-linux-gnu/bits/wchar.h:
+
+/usr/include/x86_64-linux-gnu/bits/waitflags.h:
+
+/usr/include/x86_64-linux-gnu/bits/uintn-identity.h:
+
+/usr/include/x86_64-linux-gnu/bits/typesizes.h:
+
+/usr/include/x86_64-linux-gnu/bits/types/timer_t.h:
+
+/usr/include/x86_64-linux-gnu/bits/types/time_t.h:
+
+/usr/include/x86_64-linux-gnu/bits/types/struct_itimerspec.h:
+
+/usr/include/x86_64-linux-gnu/bits/types/sigset_t.h:
 
 /usr/include/c++/13/ctime:
 
 /usr/include/c++/13/codecvt:
 
-/usr/local/include/SFML/Graphics/Sprite.hpp:
-
-/usr/include/c++/13/cstdio:
-
-/usr/include/c++/13/bits/fs_path.h:
-
-/usr/local/include/SFML/Window/WindowEnums.hpp:
-
-/usr/include/x86_64-linux-gnu/bits/types/struct_FILE.h:
+/usr/include/c++/13/cmath:
 
 /usr/include/c++/13/clocale:
-
-/usr/include/c++/13/chrono:
-
-/usr/include/c++/13/cerrno:
-
-/usr/include/x86_64-linux-gnu/bits/stdint-least.h:
 
 /usr/include/c++/13/cstdint:
 
@@ -3107,31 +3239,27 @@ CMakeFiles/StealthGame.dir/src/main.cpp.o: /app/src/main.cpp \
 
 /usr/include/c++/13/cstdlib:
 
+/usr/include/c++/13/cctype:
+
+/usr/include/x86_64-linux-gnu/bits/types/struct_tm.h:
+
+/usr/include/c++/13/ext/atomicity.h:
+
+/usr/include/c++/13/tr1/gamma.tcc:
+
 /usr/include/c++/13/variant:
 
 /usr/include/c++/13/bits/stl_function.h:
+
+/usr/include/c++/13/tr1/beta_function.tcc:
 
 /usr/include/c++/13/bits/uses_allocator_args.h:
 
 /usr/include/c++/13/bits/atomic_base.h:
 
-/usr/include/c++/13/bits/algorithmfwd.h:
-
-/usr/include/x86_64-linux-gnu/bits/long-double.h:
-
-/usr/include/c++/13/bits/stl_pair.h:
-
-/usr/include/x86_64-linux-gnu/bits/errno.h:
-
-/usr/include/x86_64-linux-gnu/bits/types/mbstate_t.h:
-
-/usr/include/c++/13/bits/unique_ptr.h:
+/usr/include/c++/13/bits/unordered_set.h:
 
 /usr/include/c++/13/bits/align.h:
-
-/usr/include/x86_64-linux-gnu/bits/waitflags.h:
-
-/usr/include/c++/13/bits/streambuf.tcc:
 
 /usr/include/c++/13/bits/unordered_map.h:
 
@@ -3143,17 +3271,41 @@ CMakeFiles/StealthGame.dir/src/main.cpp.o: /app/src/main.cpp \
 
 /usr/include/c++/13/bits/stl_uninitialized.h:
 
+/usr/include/c++/13/bits/stl_map.h:
+
 /usr/include/c++/13/locale:
 
-/usr/local/include/SFML/Graphics/Shader.hpp:
+/usr/include/x86_64-linux-gnu/bits/types/struct___jmp_buf_tag.h:
 
-/usr/include/c++/13/bits/stl_relops.h:
+/usr/include/x86_64-linux-gnu/bits/types/clockid_t.h:
 
 /usr/include/c++/13/bits/stream_iterator.h:
 
 /usr/include/c++/13/bits/enable_special_members.h:
 
 /usr/include/c++/13/bits/stl_raw_storage_iter.h:
+
+/usr/include/x86_64-linux-gnu/bits/mathcalls-helper-functions.h:
+
+/usr/include/c++/13/tr1/poly_hermite.tcc:
+
+/usr/include/c++/13/cerrno:
+
+/usr/include/x86_64-linux-gnu/bits/stdint-least.h:
+
+/usr/include/c++/13/bits/unique_ptr.h:
+
+/usr/include/x86_64-linux-gnu/bits/types/mbstate_t.h:
+
+/usr/local/include/SFML/Graphics/View.hpp:
+
+/usr/include/c++/13/debug/assertions.h:
+
+/usr/local/include/SFML/Config.hpp:
+
+/app/src/Weapon.h:
+
+/usr/include/c++/13/filesystem:
 
 /app/src/main.cpp:
 
@@ -3165,8 +3317,6 @@ CMakeFiles/StealthGame.dir/src/main.cpp.o: /app/src/main.cpp \
 
 /usr/include/x86_64-linux-gnu/bits/libc-header-start.h:
 
-/usr/include/x86_64-linux-gnu/c++/13/bits/messages_members.h:
-
 /usr/include/c++/13/bits/stl_construct.h:
 
 /usr/local/include/SFML/Window/Mouse.hpp:
@@ -3174,6 +3324,22 @@ CMakeFiles/StealthGame.dir/src/main.cpp.o: /app/src/main.cpp \
 /usr/include/c++/13/bits/stl_bvector.h:
 
 /usr/include/c++/13/bits/stl_algobase.h:
+
+/usr/include/c++/13/chrono:
+
+/usr/include/c++/13/bits/stl_algo.h:
+
+/usr/local/include/SFML/Graphics/Drawable.hpp:
+
+/usr/include/c++/13/cstddef:
+
+/usr/include/c++/13/bits/uses_allocator.h:
+
+/usr/include/c++/13/bits/postypes.h:
+
+/usr/include/c++/13/iomanip:
+
+/usr/include/x86_64-linux-gnu/bits/mathcalls-narrow.h:
 
 /usr/local/include/SFML/Window/WindowBase.hpp:
 
@@ -3189,6 +3355,10 @@ CMakeFiles/StealthGame.dir/src/main.cpp.o: /app/src/main.cpp \
 
 /usr/include/c++/13/bits/erase_if.h:
 
+/usr/local/include/SFML/Window/Export.hpp:
+
+/usr/include/c++/13/bits/stringfwd.h:
+
 /usr/include/c++/13/bits/shared_ptr.h:
 
 /usr/include/x86_64-linux-gnu/bits/struct_mutex.h:
@@ -3201,8 +3371,6 @@ CMakeFiles/StealthGame.dir/src/main.cpp.o: /app/src/main.cpp \
 
 /usr/include/x86_64-linux-gnu/bits/types/__fpos_t.h:
 
-/usr/include/c++/13/bits/range_access.h:
-
 /usr/include/c++/13/compare:
 
 /usr/include/c++/13/system_error:
@@ -3212,10 +3380,6 @@ CMakeFiles/StealthGame.dir/src/main.cpp.o: /app/src/main.cpp \
 /usr/include/x86_64-linux-gnu/bits/thread-shared-types.h:
 
 /usr/include/c++/13/bits/ptr_traits.h:
-
-/usr/include/x86_64-linux-gnu/c++/13/bits/c++locale.h:
-
-/usr/include/x86_64-linux-gnu/c++/13/bits/os_defines.h:
 
 /usr/include/c++/13/bits/std_abs.h:
 
@@ -3227,33 +3391,19 @@ CMakeFiles/StealthGame.dir/src/main.cpp.o: /app/src/main.cpp \
 
 /usr/include/c++/13/bits/ostream.tcc:
 
-/app/src/Fists.h:
-
-/usr/local/include/SFML/Graphics/Transformable.hpp:
-
-/usr/include/c++/13/bits/cxxabi_forced.h:
-
-/usr/local/include/SFML/Graphics/Drawable.hpp:
-
-/usr/include/c++/13/cstddef:
-
-/usr/include/c++/13/bits/streambuf_iterator.h:
-
-/usr/include/c++/13/ostream:
-
-/usr/include/c++/13/cassert:
-
-/usr/include/c++/13/bits/cpp_type_traits.h:
-
-/usr/include/x86_64-linux-gnu/bits/types.h:
-
 /usr/include/c++/13/bits/move.h:
+
+/usr/include/c++/13/bits/memoryfwd.h:
+
+/usr/include/c++/13/bits/fs_fwd.h:
 
 /usr/include/c++/13/bits/fs_ops.h:
 
-/usr/include/c++/13/bits/locale_conv.h:
+/usr/local/include/SFML/Graphics/Shader.hpp:
 
-/usr/include/c++/13/bits/istream.tcc:
+/usr/include/c++/13/bits/stl_relops.h:
+
+/usr/include/x86_64-linux-gnu/bits/mathcalls.h:
 
 /usr/include/c++/13/bits/exception_ptr.h:
 
@@ -3263,9 +3413,21 @@ CMakeFiles/StealthGame.dir/src/main.cpp.o: /app/src/main.cpp \
 
 /usr/include/c++/13/optional:
 
+/usr/include/x86_64-linux-gnu/c++/13/bits/ctype_inline.h:
+
+/usr/include/c++/13/bits/std_function.h:
+
+/usr/include/c++/13/bits/char_traits.h:
+
 /usr/include/c++/13/bits/hashtable_policy.h:
 
 /usr/include/x86_64-linux-gnu/bits/types/clock_t.h:
+
+/usr/include/c++/13/bits/streambuf.tcc:
+
+/usr/include/c++/13/bits/specfun.h:
+
+/usr/include/c++/13/tr1/poly_laguerre.tcc:
 
 /usr/include/libintl.h:
 
@@ -3273,55 +3435,67 @@ CMakeFiles/StealthGame.dir/src/main.cpp.o: /app/src/main.cpp \
 
 /usr/include/x86_64-linux-gnu/bits/endianness.h:
 
-/usr/include/c++/13/ext/aligned_buffer.h:
-
-/usr/include/locale.h:
-
-/usr/include/c++/13/bits/utility.h:
-
-/usr/include/x86_64-linux-gnu/bits/pthreadtypes-arch.h:
-
-/usr/include/c++/13/bits/basic_ios.h:
-
-/usr/include/x86_64-linux-gnu/bits/time64.h:
+/usr/include/c++/13/bits/invoke.h:
 
 /usr/include/c++/13/bits/atomic_lockfree_defines.h:
 
 /usr/include/x86_64-linux-gnu/asm/errno.h:
 
-/usr/include/c++/13/ext/numeric_traits.h:
-
-/usr/include/c++/13/bits/stl_iterator.h:
-
-/usr/include/x86_64-linux-gnu/bits/types/struct_timeval.h:
-
-/usr/include/c++/13/bits/locale_facets.h:
-
 /usr/local/include/SFML/System/Sleep.hpp:
 
 /usr/include/c++/13/bits/stl_vector.h:
+
+/usr/include/x86_64-linux-gnu/sys/types.h:
+
+/usr/include/c++/13/unordered_set:
 
 /usr/local/include/SFML/Window/Event.hpp:
 
 /usr/include/c++/13/bits/stl_tempbuf.h:
 
-/usr/include/x86_64-linux-gnu/bits/types/clockid_t.h:
-
-/usr/include/x86_64-linux-gnu/bits/types/struct___jmp_buf_tag.h:
-
 /usr/include/c++/13/bits/stl_tree.h:
 
 /usr/include/c++/13/bits/codecvt.h:
 
-/usr/local/include/SFML/Window/Export.hpp:
-
-/usr/include/c++/13/bits/stringfwd.h:
-
 /usr/include/c++/13/backward/binders.h:
 
-/usr/include/assert.h:
+/usr/include/c++/13/bits/basic_ios.tcc:
 
-/usr/include/c++/13/backward/auto_ptr.h:
+/usr/local/include/SFML/System/Angle.hpp:
+
+/app/src/SoundEngine.h:
+
+/usr/local/include/SFML/Window/WindowBase.inl:
+
+/usr/include/c++/13/pstl/execution_defs.h:
+
+/usr/include/c++/13/bits/alloc_traits.h:
+
+/usr/include/c++/13/bits/concept_check.h:
+
+/usr/include/x86_64-linux-gnu/bits/long-double.h:
+
+/usr/include/c++/13/bits/algorithmfwd.h:
+
+/usr/include/x86_64-linux-gnu/bits/fp-logb.h:
+
+/usr/include/x86_64-linux-gnu/gnu/stubs-64.h:
+
+/usr/include/c++/13/bits/node_handle.h:
+
+/usr/include/wchar.h:
+
+/usr/include/c++/13/bits/shared_ptr_base.h:
+
+/usr/include/c++/13/bits/basic_ios.h:
+
+/usr/include/x86_64-linux-gnu/bits/time64.h:
+
+/usr/include/c++/13/bits/fs_path.h:
+
+/usr/local/include/SFML/Graphics/Sprite.hpp:
+
+/usr/include/c++/13/cstdio:
 
 /usr/include/c++/13/bits/allocated_ptr.h:
 
@@ -3329,13 +3503,19 @@ CMakeFiles/StealthGame.dir/src/main.cpp.o: /app/src/main.cpp \
 
 /usr/include/c++/13/bits/basic_string.tcc:
 
-/usr/include/alloca.h:
+/usr/include/c++/13/bits/locale_facets.h:
+
+/usr/include/assert.h:
+
+/usr/include/c++/13/backward/auto_ptr.h:
+
+/app/src/Utils.h:
 
 /usr/include/c++/13/bits/predefined_ops.h:
 
 /usr/include/c++/13/iosfwd:
 
-/usr/include/c++/13/bits/localefwd.h:
+/usr/include/alloca.h:
 
 /app/src/Knife.h:
 
@@ -3345,15 +3525,41 @@ CMakeFiles/StealthGame.dir/src/main.cpp.o: /app/src/main.cpp \
 
 /usr/include/c++/13/bits/locale_facets_nonio.h:
 
-/usr/include/c++/13/bits/concept_check.h:
+/usr/include/c++/13/bits/istream.tcc:
 
-/usr/include/c++/13/bits/alloc_traits.h:
+/usr/include/c++/13/bits/locale_conv.h:
 
-/usr/include/c++/13/list:
+/usr/include/c++/13/ostream:
 
-/usr/include/c++/13/ext/alloc_traits.h:
+/usr/include/c++/13/tr1/riemann_zeta.tcc:
 
-/usr/include/c++/13/new:
+/usr/include/c++/13/cassert:
+
+/usr/include/c++/13/bits/cpp_type_traits.h:
+
+/usr/include/x86_64-linux-gnu/bits/types.h:
+
+/app/src/Fists.h:
+
+/usr/local/include/SFML/Graphics/Transformable.hpp:
+
+/usr/include/c++/13/bits/cxxabi_forced.h:
+
+/usr/include/x86_64-linux-gnu/c++/13/bits/c++allocator.h:
+
+/app/src/Player.h:
+
+/usr/include/c++/13/bits/localefwd.h:
+
+/usr/include/c++/13/bits/streambuf_iterator.h:
+
+/usr/include/x86_64-linux-gnu/bits/flt-eval-method.h:
+
+/usr/local/include/SFML/Audio/Export.hpp:
+
+/usr/include/x86_64-linux-gnu/bits/waitstatus.h:
+
+/usr/include/c++/13/bits/exception_defines.h:
 
 /usr/include/c++/13/bits/cxxabi_init_exception.h:
 
@@ -3363,27 +3569,15 @@ CMakeFiles/StealthGame.dir/src/main.cpp.o: /app/src/main.cpp \
 
 /usr/include/c++/13/bits/exception.h:
 
+/usr/include/c++/13/bits/memory_resource.h:
+
+/usr/include/c++/13/streambuf:
+
 /usr/include/x86_64-linux-gnu/bits/stdlib-float.h:
-
-/usr/include/x86_64-linux-gnu/bits/uintn-identity.h:
-
-/usr/include/c++/13/bits/basic_ios.tcc:
-
-/usr/local/include/SFML/Window/WindowBase.inl:
-
-/usr/include/c++/13/pstl/execution_defs.h:
-
-/app/src/Player.cpp:
-
-/usr/include/x86_64-linux-gnu/c++/13/bits/gthr.h:
 
 /usr/include/x86_64-linux-gnu/bits/types/error_t.h:
 
 /usr/include/c++/13/bits/hashtable.h:
-
-/usr/include/c++/13/bits/fs_fwd.h:
-
-/usr/include/c++/13/bits/memoryfwd.h:
 
 /usr/include/c++/13/bits/functional_hash.h:
 
@@ -3399,7 +3593,7 @@ CMakeFiles/StealthGame.dir/src/main.cpp.o: /app/src/main.cpp \
 
 /usr/include/c++/13/bits/hash_bytes.h:
 
-/usr/include/x86_64-linux-gnu/c++/13/bits/c++config.h:
+/usr/include/x86_64-linux-gnu/bits/math-vector.h:
 
 /usr/include/c++/13/bits/basic_string.h:
 
@@ -3417,15 +3611,41 @@ CMakeFiles/StealthGame.dir/src/main.cpp.o: /app/src/main.cpp \
 
 /usr/include/c++/13/utility:
 
-/usr/include/c++/13/bits/invoke.h:
+/usr/include/x86_64-linux-gnu/sys/select.h:
 
-/usr/include/c++/13/streambuf:
+/usr/include/c++/13/cwchar:
 
-/usr/include/c++/13/bits/memory_resource.h:
+/usr/include/c++/13/bits/stl_pair.h:
 
-/usr/include/c++/13/bits/shared_ptr_base.h:
+/usr/include/x86_64-linux-gnu/bits/errno.h:
 
-/usr/include/wchar.h:
+/usr/include/c++/13/ext/aligned_buffer.h:
+
+/usr/include/locale.h:
+
+/usr/include/c++/13/bits/utility.h:
+
+/usr/include/x86_64-linux-gnu/bits/pthreadtypes-arch.h:
+
+/usr/include/c++/13/new:
+
+/usr/include/c++/13/ext/concurrence.h:
+
+/usr/include/x86_64-linux-gnu/bits/types/struct_timeval.h:
+
+/usr/include/c++/13/bits/stl_iterator.h:
+
+/usr/include/c++/13/ext/numeric_traits.h:
+
+/usr/include/c++/13/ext/string_conversions.h:
+
+/usr/include/c++/13/ext/type_traits.h:
+
+/usr/include/c++/13/functional:
+
+/usr/include/c++/13/tr1/bessel_function.tcc:
+
+/usr/include/c++/13/initializer_list:
 
 /usr/include/c++/13/ios:
 
@@ -3433,9 +3653,23 @@ CMakeFiles/StealthGame.dir/src/main.cpp.o: /app/src/main.cpp \
 
 /usr/include/c++/13/istream:
 
+/usr/local/include/SFML/Window/WindowEnums.hpp:
+
+/usr/include/x86_64-linux-gnu/bits/types/struct_FILE.h:
+
+/usr/include/x86_64-linux-gnu/bits/libm-simd-decl-stubs.h:
+
 /usr/include/c++/13/bits/ios_base.h:
 
 /usr/include/c++/13/iterator:
+
+/usr/include/x86_64-linux-gnu/bits/types/wint_t.h:
+
+/usr/include/c++/13/limits:
+
+/usr/include/c++/13/ext/alloc_traits.h:
+
+/usr/include/c++/13/list:
 
 /usr/local/include/SFML/System/Vector3.inl:
 
@@ -3447,12 +3681,6 @@ CMakeFiles/StealthGame.dir/src/main.cpp.o: /app/src/main.cpp \
 
 /usr/include/x86_64-linux-gnu/bits/floatn.h:
 
-/usr/include/x86_64-linux-gnu/bits/types/struct_itimerspec.h:
-
-/app/src/Player.h:
-
-/usr/include/x86_64-linux-gnu/c++/13/bits/c++allocator.h:
-
 /usr/include/c++/13/exception:
 
 /usr/include/c++/13/pstl/glue_memory_defs.h:
@@ -3463,35 +3691,41 @@ CMakeFiles/StealthGame.dir/src/main.cpp.o: /app/src/main.cpp \
 
 /usr/include/c++/13/stdexcept:
 
-/app/src/Weapon.h:
-
-/usr/local/include/SFML/Config.hpp:
-
 /usr/include/x86_64-linux-gnu/bits/stdint-intn.h:
 
 /usr/include/c++/13/string:
 
-/usr/include/c++/13/map:
-
-/usr/include/c++/13/string_view:
-
 /usr/include/features-time64.h:
+
+/usr/local/include/SFML/Audio/SoundFileFactory.hpp:
+
+/usr/include/c++/13/tr1/ell_integral.tcc:
+
+/usr/include/c++/13/tr1/exp_integral.tcc:
+
+/usr/include/c++/13/bits/range_access.h:
+
+/usr/include/c++/13/tr1/hypergeometric.tcc:
+
+/app/src/Shocker.h:
+
+/usr/include/c++/13/type_traits:
+
+/usr/include/c++/13/tr1/legendre_function.tcc:
+
+/usr/include/c++/13/tr1/modified_bessel_func.tcc:
+
+/usr/include/c++/13/tr1/special_function_util.h:
+
+/app/src/Pistol.cpp:
+
+/usr/include/stdc-predef.h:
 
 /usr/include/c++/13/bits/list.tcc:
 
 /usr/include/c++/13/bits/nested_exception.h:
 
 /usr/include/c++/13/tuple:
-
-/usr/lib/gcc/x86_64-linux-gnu/13/include/stddef.h:
-
-/app/src/Shocker.h:
-
-/usr/include/c++/13/type_traits:
-
-/usr/local/include/SFML/Window/Context.hpp:
-
-/usr/include/x86_64-linux-gnu/sys/single_threaded.h:
 
 /usr/include/c++/13/bits/allocator.h:
 
@@ -3517,12 +3751,6 @@ CMakeFiles/StealthGame.dir/src/main.cpp.o: /app/src/main.cpp \
 
 /usr/include/sched.h:
 
-/usr/include/x86_64-linux-gnu/c++/13/bits/time_members.h:
-
-/app/src/Pistol.cpp:
-
-/usr/include/stdc-predef.h:
-
 /usr/include/endian.h:
 
 /usr/include/stdint.h:
@@ -3541,15 +3769,19 @@ CMakeFiles/StealthGame.dir/src/main.cpp.o: /app/src/main.cpp \
 
 /usr/include/x86_64-linux-gnu/bits/endian.h:
 
-/usr/include/x86_64-linux-gnu/gnu/stubs.h:
-
 /usr/include/c++/13/bits/requires_hosted.h:
 
 /usr/include/x86_64-linux-gnu/bits/floatn-common.h:
 
-/usr/include/c++/13/limits:
+/usr/local/include/SFML/Window/Event.inl:
 
-/usr/include/x86_64-linux-gnu/bits/types/wint_t.h:
+/usr/include/x86_64-linux-gnu/bits/fp-fast.h:
+
+/usr/include/c++/13/map:
+
+/usr/include/c++/13/string_view:
+
+/usr/include/x86_64-linux-gnu/bits/iscanonical.h:
 
 /usr/include/x86_64-linux-gnu/bits/locale.h:
 
@@ -3561,21 +3793,23 @@ CMakeFiles/StealthGame.dir/src/main.cpp.o: /app/src/main.cpp \
 
 /usr/include/x86_64-linux-gnu/bits/sched.h:
 
+/usr/include/x86_64-linux-gnu/bits/time.h:
+
+/usr/include/x86_64-linux-gnu/bits/select.h:
+
 /usr/include/time.h:
 
 /usr/include/x86_64-linux-gnu/bits/setjmp.h:
 
 /usr/include/x86_64-linux-gnu/bits/types/__fpos64_t.h:
 
-/usr/include/c++/13/cwchar:
+/usr/include/x86_64-linux-gnu/c++/13/bits/gthr-default.h:
 
-/usr/include/x86_64-linux-gnu/sys/select.h:
+/usr/include/x86_64-linux-gnu/bits/types/struct_timespec.h:
+
+/usr/include/x86_64-linux-gnu/bits/stdint-uintn.h:
 
 /usr/include/x86_64-linux-gnu/bits/types/FILE.h:
-
-/usr/include/x86_64-linux-gnu/bits/select.h:
-
-/usr/include/x86_64-linux-gnu/bits/time.h:
 
 /usr/local/include/SFML/System/Utf.hpp:
 
@@ -3587,15 +3821,15 @@ CMakeFiles/StealthGame.dir/src/main.cpp.o: /app/src/main.cpp \
 
 /usr/include/x86_64-linux-gnu/bits/timex.h:
 
-/usr/include/x86_64-linux-gnu/c++/13/bits/cpu_defines.h:
+/usr/include/math.h:
 
 /usr/include/x86_64-linux-gnu/bits/types/__FILE.h:
-
-/usr/include/c++/13/bits/stl_multimap.h:
 
 /usr/local/include/SFML/System/Vector2.inl:
 
 /usr/local/include/SFML/Graphics/VertexBuffer.hpp:
+
+/usr/include/c++/13/bits/stl_multimap.h:
 
 /usr/include/x86_64-linux-gnu/bits/types/__locale_t.h:
 
@@ -3609,66 +3843,4 @@ CMakeFiles/StealthGame.dir/src/main.cpp.o: /app/src/main.cpp \
 
 /usr/include/x86_64-linux-gnu/bits/types/cookie_io_functions_t.h:
 
-/usr/include/x86_64-linux-gnu/bits/wchar.h:
-
 /usr/include/x86_64-linux-gnu/bits/types/locale_t.h:
-
-/usr/include/x86_64-linux-gnu/bits/wctype-wchar.h:
-
-/usr/include/c++/13/ext/atomicity.h:
-
-/usr/include/x86_64-linux-gnu/bits/types/struct_tm.h:
-
-/usr/include/x86_64-linux-gnu/bits/types/time_t.h:
-
-/usr/include/x86_64-linux-gnu/bits/types/timer_t.h:
-
-/usr/include/x86_64-linux-gnu/bits/typesizes.h:
-
-/usr/local/include/SFML/Audio/Export.hpp:
-
-/usr/include/c++/13/bits/exception_defines.h:
-
-/usr/include/x86_64-linux-gnu/bits/waitstatus.h:
-
-/usr/include/x86_64-linux-gnu/bits/wordsize.h:
-
-/usr/include/x86_64-linux-gnu/c++/13/bits/atomic_word.h:
-
-/usr/local/include/SFML/Graphics/BlendMode.hpp:
-
-/usr/local/include/SFML/System/Clock.hpp:
-
-/usr/local/include/SFML/Graphics/RectangleShape.hpp:
-
-/usr/include/x86_64-linux-gnu/c++/13/bits/ctype_base.h:
-
-/usr/include/c++/13/bits/std_function.h:
-
-/usr/include/c++/13/bits/char_traits.h:
-
-/usr/include/x86_64-linux-gnu/c++/13/bits/ctype_inline.h:
-
-/usr/include/x86_64-linux-gnu/c++/13/bits/error_constants.h:
-
-/usr/include/x86_64-linux-gnu/bits/types/struct_timespec.h:
-
-/usr/include/x86_64-linux-gnu/bits/stdint-uintn.h:
-
-/usr/include/x86_64-linux-gnu/c++/13/bits/gthr-default.h:
-
-/usr/include/c++/13/bits/node_handle.h:
-
-/usr/include/x86_64-linux-gnu/gnu/stubs-64.h:
-
-/usr/include/x86_64-linux-gnu/sys/cdefs.h:
-
-/usr/include/c++/13/unordered_set:
-
-/usr/include/x86_64-linux-gnu/sys/types.h:
-
-/usr/lib/gcc/x86_64-linux-gnu/13/include/stdarg.h:
-
-/usr/local/include/SFML/Window/Sensor.hpp:
-
-/usr/lib/gcc/x86_64-linux-gnu/13/include/stdint.h:

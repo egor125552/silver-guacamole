@@ -14,7 +14,7 @@ public:
     Player(float x, float y);
 
     void handleInput();
-    void update();
+    void update(float deltaTime);
     void draw(sf::RenderWindow& window);
 
     // Сигнатура изменена на прием вектора unique_ptr
@@ -26,8 +26,15 @@ public:
     bool isStunned() const;
     bool isDead() const;
 
+    sf::Vector2f getPosition() const;
+    bool isRunning() const;
+
 private:
     sf::Vector2f m_position;
+    sf::Vector2f m_velocity;
+    float m_walkSpeed;
+    float m_runSpeed;
+    bool m_isRunning;
     int m_health;
     sf::CircleShape m_shape;
 

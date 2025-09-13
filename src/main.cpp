@@ -14,10 +14,14 @@ int main()
 
     Player player(400.f, 300.f);
     std::vector<std::unique_ptr<Enemy>> enemies;
-    enemies.push_back(std::make_unique<Enemy>(200.f, 150.f));
+    enemies.push_back(std::make_unique<Enemy>(200.f, 150.f, &player));
+
+    sf::Clock clock;
 
     while (window.isOpen())
     {
+        float deltaTime = clock.restart().asSeconds();
+
         while (const auto event = window.pollEvent())
         {
             if (event->is<sf::Event::Closed>())
@@ -36,10 +40,11 @@ int main()
             }
         }
 
-        player.update();
+        player.handleInput();
+        player.update(deltaTime);
         for (auto& enemy : enemies)
         {
-            enemy->update();
+            enemy->update(deltaTime);
         }
         SoundEngine::getInstance()->update();
 

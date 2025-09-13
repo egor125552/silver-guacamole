@@ -9,4 +9,5 @@ public:
     std::string getName() const override;
     int getDamage() const override;
     bool isStunWeapon() const override;
+    bool isSilent() const override { return true; }
 };
