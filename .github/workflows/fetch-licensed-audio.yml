@@ -1,0 +1,39 @@
+name: Fetch licensed Kenney audio
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download official CC0 packs
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p licensed-audio/packs licensed-audio/unpacked
+          curl --fail --location --retry 3 'https://kenney.nl/media/pages/assets/sci-fi-sounds/6b296f9ecf-1677589334/kenney_sci-fi-sounds.zip' -o licensed-audio/packs/sci-fi-sounds.zip
+          curl --fail --location --retry 3 'https://kenney.nl/media/pages/assets/impact-sounds/87b4ddecda-1677589768/kenney_impact-sounds.zip' -o licensed-audio/packs/impact-sounds.zip
+          curl --fail --location --retry 3 'https://kenney.nl/media/pages/assets/interface-sounds/fa43c1dd4d-1677589452/kenney_interface-sounds.zip' -o licensed-audio/packs/interface-sounds.zip
+          curl --fail --location --retry 3 'https://kenney.nl/media/pages/assets/rpg-audio/8e99002d76-1677590336/kenney_rpg-audio.zip' -o licensed-audio/packs/rpg-audio.zip
+          for archive in licensed-audio/packs/*.zip; do
+            name=$(basename "$archive" .zip)
+            unzip -q "$archive" -d "licensed-audio/unpacked/$name"
+          done
+          find licensed-audio/unpacked -type f -print | sort > licensed-audio/FILE_LIST.txt
+          sha256sum licensed-audio/packs/*.zip > licensed-audio/PACK_SHA256.txt
+      - name: Upload official packs
+        uses: actions/upload-artifact@v4
+        with:
+          name: kenney-cc0-audio-packs
+          path: licensed-audio
+          if-no-files-found: error
+          retention-days: 7
