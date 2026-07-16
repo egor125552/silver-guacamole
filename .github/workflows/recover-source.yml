@@ -1,0 +1,38 @@
+name: Recover hidden Midnight Switchyard source
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Decode and validate archived source
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(find bootstrap -maxdepth 1 -name 'chunk-*' | wc -l)" -eq 8
+          cat bootstrap/chunk-* | base64 --decode > "$RUNNER_TEMP/midnight-switchyard.tar.gz"
+          tar -tzf "$RUNNER_TEMP/midnight-switchyard.tar.gz" > "$RUNNER_TEMP/archive-files.txt"
+          mkdir recovered-source
+          tar -xzf "$RUNNER_TEMP/midnight-switchyard.tar.gz" -C recovered-source
+          test -f recovered-source/package.json
+          test -f recovered-source/index.html
+          cp "$RUNNER_TEMP/archive-files.txt" recovered-source/RECOVERED_ARCHIVE_FILE_LIST.txt
+      - name: Upload recovered source
+        uses: actions/upload-artifact@v4
+        with:
+          name: recovered-midnight-switchyard-source
+          path: recovered-source
+          if-no-files-found: error
+          retention-days: 7
