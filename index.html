@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#070b12">
+  <title>Полуночная сортировочная</title>
+  <style>
+    :root{color-scheme:dark;--bg:#070b12;--panel:#111a28;--text:#f4f7fb;--muted:#aebbcf;--accent:#8bd5ff;--danger:#ff8b8b}
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100vh;background:linear-gradient(180deg,#070b12,#0c1421);color:var(--text);font:18px/1.45 system-ui,-apple-system,Segoe UI,sans-serif}
+    main{max-width:860px;margin:auto;padding:20px}
+    h1{font-size:clamp(1.7rem,6vw,3rem);margin:.25rem 0}.subtitle{color:var(--muted);margin-top:0}
+    .panel{background:rgba(17,26,40,.94);border:1px solid #26364e;border-radius:16px;padding:16px;margin:14px 0}
+    .status{font-weight:700;min-height:3rem}.controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+    button{min-height:54px;border:2px solid #38506f;border-radius:12px;background:#17253a;color:var(--text);font:inherit;font-weight:700;padding:10px}
+    button:focus-visible{outline:4px solid var(--accent);outline-offset:2px}button:active{transform:translateY(1px)}
+    .primary{background:#173b52;border-color:#5fc7ff}.danger{border-color:#985151;color:#ffd4d4}
+    details{margin-top:12px}.small{font-size:.9rem;color:var(--muted)}kbd{background:#202d41;border:1px solid #526681;border-radius:5px;padding:1px 5px}
+    #gameSurface{touch-action:none;min-height:130px;display:flex;align-items:center;justify-content:center;text-align:center;user-select:none}
+    @media(min-width:650px){.controls{grid-template-columns:repeat(4,minmax(0,1fr))}}
+  </style>
+</head>
+<body>
+<main>
+  <h1>Полуночная сортировочная</h1>
+  <p class="subtitle">Пространственная аудиоигра. Лучше играть в наушниках.</p>
+
+  <section class="panel" aria-labelledby="startHeading">
+    <h2 id="startHeading">Смена начинается</h2>
+    <p>Найди три перегревающихся энергоядра и отнеси их к центральному лифту. Дроны идут на шум. Охлаждающие площадки сбрасывают нагрев.</p>
+    <button id="start" class="primary">Начать или перезапустить</button>
+  </section>
+
+  <section class="panel" aria-labelledby="statusHeading">
+    <h2 id="statusHeading">Состояние</h2>
+    <p id="status" class="status">Игра ещё не начата.</p>
+    <p id="announcer" class="small" role="status" aria-live="polite" aria-atomic="true"></p>
+  </section>
+
+  <section id="gameSurface" class="panel" tabindex="0" aria-label="Игровая поверхность. Свайп вверх — шаг. Свайп влево или вправо — поворот. Касание — взаимодействие. Двойное касание — бросить болт. Долгое нажатие — состояние.">
+    <p>На телефоне управляй жестами здесь. С VoiceOver используй кнопки ниже.</p>
+  </section>
+
+  <section class="panel" aria-labelledby="controlsHeading">
+    <h2 id="controlsHeading">Управление</h2>
+    <div class="controls">
+      <button data-cmd="left">Повернуть налево</button>
+      <button data-cmd="forward">Шаг вперёд</button>
+      <button data-cmd="right">Повернуть направо</button>
+      <button data-cmd="interact" class="primary">Взаимодействовать</button>
+      <button data-cmd="bolt">Бросить болт</button>
+      <button data-cmd="status">Сказать состояние</button>
+      <button data-cmd="pause">Пауза</button>
+      <button data-cmd="mute" class="danger">Аварийно выключить звук</button>
+    </div>
+    <details>
+      <summary>Клавиатура и правила</summary>
+      <p><kbd>W</kbd> или стрелка вверх — шаг; <kbd>A</kbd>/<kbd>D</kbd> или стрелки — поворот; <kbd>Space</kbd> — взаимодействие; <kbd>Q</kbd> — болт; <kbd>I</kbd> — состояние; <kbd>H</kbd> — инструкция; <kbd>Esc</kbd> — пауза.</p>
+      <p>Шаг создаёт шум. Болт отвлекает ближайшего дрона. Если нагрев ядра достигнет 100%, ядро аварийно сбрасывается. Столкновение с дроном завершает смену.</p>
+    </details>
+  </section>
+</main>
+<script>
+(() => {
+  "use strict";
+  const W=7,H=7, DIRS=[{x:0,y:-1,n:"север"},{x:1,y:0,n:"восток"},{x:0,y:1,n:"юг"},{x:-1,y:0,n:"запад"}];
+  const cores0=[{x:1,y:1},{x:5,y:1},{x:5,y:5}], coolers=[{x:3,y:1},{x:1,y:4}], walls=new Set(["2,2","3,2","4,2","2,4","3,4"]);
+  const lift={x:3,y:6};
+  const $=s=>document.querySelector(s), statusEl=$("#status"), live=$("#announcer"), surface=$("#gameSurface");
+  let state, timer=null, audio=null, master=null, speechEnabled=true, pointer=null, lastTap=0;
+
+  function reset(){
+    state={running:false,paused:false,over:false,won:false,x:3,y:6,dir:0,carrying:null,cores:cores0.map((p,i)=>({...p,id:i,taken:false,delivered:false})),
+      delivered:0,heat:0,bolts:3,score:1500,steps:0,drones:[{x:0,y:0,tx:null,ty:null},{x:6,y:3,tx:null,ty:null}],tick:0};
+    render("Готово. Нажми «Начать».");
+  }
+  function key(x,y){return `${x},${y}`}; function inside(x,y){return x>=0&&x<W&&y>=0&&y<H&&!walls.has(key(x,y))}
+  function dist(a,b){return Math.abs(a.x-b.x)+Math.abs(a.y-b.y)}
+  function initAudio(){
+    if(audio) return;
+    audio=new (window.AudioContext||window.webkitAudioContext)();
+    master=audio.createGain(); master.gain.value=.48; master.connect(audio.destination);
+  }
+  async function wake(){initAudio(); if(audio.state==="suspended") await audio.resume()}
+  function tone(freq=440,d=.09,pan=0,type="sine",gain=.16,delay=0){
+    if(!audio||!master) return;
+    const t=audio.currentTime+delay,o=audio.createOscillator(),g=audio.createGain(),p=audio.createStereoPanner();
+    o.type=type;o.frequency.setValueAtTime(freq,t);p.pan.value=Math.max(-1,Math.min(1,pan));
+    g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(gain,t+.015);g.gain.exponentialRampToValueAtTime(.0001,t+d);
+    o.connect(g).connect(p).connect(master);o.start(t);o.stop(t+d+.03);
+  }
+  function noise(d=.08,pan=0,gain=.1){
+    if(!audio||!master)return; const n=Math.max(1,Math.floor(audio.sampleRate*d)),b=audio.createBuffer(1,n,audio.sampleRate),a=b.getChannelData(0);
+    for(let i=0;i<n;i++)a[i]=(Math.random()*2-1)*(1-i/n);
+    const s=audio.createBufferSource(),g=audio.createGain(),p=audio.createStereoPanner();s.buffer=b;g.gain.value=gain;p.pan.value=pan;s.connect(g).connect(p).connect(master);s.start();
+  }
+  function relativePan(obj){
+    const dx=obj.x-state.x,dy=obj.y-state.y, d=DIRS[state.dir], right={x:-d.y,y:d.x};
+    const lateral=dx*right.x+dy*right.y; return Math.max(-1,Math.min(1,lateral/3));
+  }
+  function beacon(){
+    if(!state.running||state.paused||state.over||!audio)return;
+    let targets=state.carrying?[lift]:state.cores.filter(c=>!c.taken&&!c.delivered);
+    if(!targets.length)targets=[lift];
+    targets.sort((a,b)=>dist(state,a)-dist(state,b)); const t=targets[0],dd=dist(state,t);
+    tone(state.carrying?520:720,.08,relativePan(t),"sine",Math.max(.04,.18-dd*.018));
+    state.drones.forEach(dr=>{const dd2=dist(state,dr); if(dd2<6)tone(135,.13,relativePan(dr),"sawtooth",Math.max(.025,.13-dd2*.016),.12)});
+  }
+  function say(text,force=false){
+    live.textContent=""; requestAnimationFrame(()=>live.textContent=text);
+    if((speechEnabled||force)&&"speechSynthesis" in window){
+      speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(text);u.lang="ru-RU";u.rate=1.08;speechSynthesis.speak(u);
+    }
+  }
+  function summary(){
+    if(!state.running)return "Игра ещё не начата.";
+    const carry=state.carrying!==null?`Несёшь ядро, нагрев ${Math.round(state.heat)} процентов.`:"Ядра нет.";
+    return `Доставлено ${state.delivered} из 3. ${carry} Болтов ${state.bolts}. Очки ${Math.max(0,state.score)}. Направление ${DIRS[state.dir].n}.`;
+  }
+  function render(message){
+    statusEl.textContent=summary(); if(message)say(message); beacon();
+  }
+  async function start(){
+    await wake(); if(timer)clearInterval(timer); reset();state.running=true;state.score=1500;
+    timer=setInterval(tick,900);tone(420,.08,-.5);tone(620,.12,.5,"sine",.16,.1);
+    render("Смена началась. Лифт позади. Ближайшее ядро звучит как высокий маяк.");
+    surface.focus();
+  }
+  function lose(reason){state.over=true;state.running=false;clearInterval(timer);noise(.5,0,.22);tone(90,.7,0,"sawtooth",.2);render(`Смена провалена. ${reason} Итог: ${Math.max(0,state.score)} очков.`)}
+  function win(){
+    state.over=true;state.running=false;state.won=true;clearInterval(timer);state.score+=Math.max(0,500-state.steps*4);
+    const best=Math.max(Number(localStorage.getItem("switchyardBest")||0),state.score);localStorage.setItem("switchyardBest",best);
+    [523,659,784,1047].forEach((f,i)=>tone(f,.23,i%2?.35:-.35,"sine",.16,i*.13));
+    render(`Смена завершена. Все ядра доставлены. ${state.score} очков. Рекорд ${best}.`);
+  }
+  function move(){
+    const d=DIRS[state.dir],nx=state.x+d.x,ny=state.y+d.y;
+    if(!inside(nx,ny)){noise(.1,0,.14);render("Впереди ограждение.");return}
+    state.x=nx;state.y=ny;state.steps++;state.score-=2;noise(.055,(Math.random()-.5)*.4,.11);
+    if(state.carrying!==null)state.heat=Math.min(100,state.heat+7);
+    attract(state.x,state.y); checkCell(); render();
+  }
+  function turn(delta){state.dir=(state.dir+delta+4)%4;tone(delta<0?310:390,.055,delta<0?-.55:.55,"triangle",.1);render(`Поворот. ${DIRS[state.dir].n}.`)}
+  function checkCell(){
+    if(state.drones.some(d=>d.x===state.x&&d.y===state.y)){lose("Дрон перехватил тебя.");return}
+    if(state.carrying!==null&&coolers.some(c=>c.x===state.x&&c.y===state.y)){state.heat=Math.max(0,state.heat-38);tone(260,.25,-.4,"sine",.12);tone(330,.25,.4,"sine",.12,.05);say("Охлаждение. Нагрев снижен.");}
+    if(state.carrying!==null&&state.heat>=100){const c=state.cores[state.carrying];c.taken=false;c.x=state.x;c.y=state.y;state.carrying=null;state.heat=0;state.score-=120;noise(.35,0,.2);say("Перегрев. Ядро аварийно сброшено.");}
+  }
+  function interact(){
+    if(!state.running||state.paused||state.over)return;
+    if(state.x===lift.x&&state.y===lift.y&&state.carrying!==null){
+      const c=state.cores[state.carrying];c.delivered=true;state.carrying=null;state.heat=0;state.delivered++;state.score+=300;
+      tone(480,.1,-.4);tone(720,.16,.4,"sine",.18,.1); if(state.delivered===3){win();return} render(`Ядро принято лифтом. Доставлено ${state.delivered} из 3.`);return;
+    }
+    const c=state.cores.find(c=>!c.taken&&!c.delivered&&c.x===state.x&&c.y===state.y);
+    if(c&&state.carrying===null){c.taken=true;state.carrying=c.id;state.heat=10;state.score+=80;tone(600,.1,-.3);tone(900,.12,.3,"sine",.17,.08);render("Ядро поднято. Возвращайся к низкому маяку лифта или найди охлаждение.");return}
+    render("Здесь не с чем взаимодействовать.");
+  }
+  function attract(x,y){state.drones.forEach(d=>{if(dist(d,{x,y})<=4){d.tx=x;d.ty=y}})}
+  function bolt(){
+    if(!state.running||state.paused||state.over)return;if(state.bolts<=0){render("Болты закончились.");return}
+    state.bolts--;const d=DIRS[state.dir],tx=Math.max(0,Math.min(W-1,state.x+d.x*3)),ty=Math.max(0,Math.min(H-1,state.y+d.y*3));
+    state.drones.forEach(dr=>{dr.tx=tx;dr.ty=ty});noise(.18,relativePan({x:tx,y:ty}),.2);state.score-=15;render("Болт звякнул впереди. Дроны проверяют шум.");
+  }
+  function stepDrone(dr){
+    const target=dr.tx!==null?{x:dr.tx,y:dr.ty}:{x:state.x,y:state.y}; if(dist(dr,target)>5&&dr.tx===null)return;
+    const opts=[{x:dr.x+1,y:dr.y},{x:dr.x-1,y:dr.y},{x:dr.x,y:dr.y+1},{x:dr.x,y:dr.y-1}].filter(p=>inside(p.x,p.y));
+    opts.sort((a,b)=>dist(a,target)-dist(b,target)); if(opts[0]){dr.x=opts[0].x;dr.y=opts[0].y}
+    if(dr.x===target.x&&dr.y===target.y){dr.tx=null;dr.ty=null}
+  }
+  function tick(){
+    if(!state.running||state.paused||state.over)return;state.tick++;
+    if(state.carrying!==null)state.heat=Math.min(100,state.heat+3);
+    if(state.tick%2===0)state.drones.forEach(stepDrone);
+    state.score--;checkCell();if(!state.over){statusEl.textContent=summary();beacon()}
+  }
+  async function command(cmd){
+    if(cmd==="mute"){speechEnabled=false;if("speechSynthesis" in window)speechSynthesis.cancel();if(audio)await audio.suspend();live.textContent="Звук аварийно выключен. Нажми «Начать», чтобы восстановить.";return}
+    await wake(); if(cmd==="status"){render(summary());return} if(cmd==="pause"){if(!state.running)return;state.paused=!state.paused;render(state.paused?"Пауза.":"Продолжение.");return}
+    if(!state.running||state.over){say("Сначала нажми «Начать».");return}if(state.paused){say("Игра на паузе.");return}
+    if(cmd==="forward")move();else if(cmd==="left")turn(-1);else if(cmd==="right")turn(1);else if(cmd==="interact")interact();else if(cmd==="bolt")bolt();
+  }
+  $("#start").addEventListener("click",start);
+  document.querySelectorAll("[data-cmd]").forEach(b=>b.addEventListener("click",()=>command(b.dataset.cmd)));
+  addEventListener("keydown",e=>{
+    const map={ArrowUp:"forward",w:"forward",W:"forward",ArrowLeft:"left",a:"left",A:"left",ArrowRight:"right",d:"right",D:"right"," ":"interact",Enter:"interact",q:"bolt",Q:"bolt",i:"status",I:"status",Escape:"pause"};
+    if(e.key==="h"||e.key==="H"){e.preventDefault();say("Найди три высоких маяка ядер. Низкий маяк ведёт к лифту. Избегай низкого рычания дронов.");return}
+    if(map[e.key]){e.preventDefault();command(map[e.key])}
+  });
+  surface.addEventListener("pointerdown",e=>{surface.setPointerCapture(e.pointerId);pointer={id:e.pointerId,x:e.clientX,y:e.clientY,t:performance.now(),long:setTimeout(()=>command("status"),650)}});
+  surface.addEventListener("pointerup",e=>{
+    if(!pointer||pointer.id!==e.pointerId)return;clearTimeout(pointer.long);const dx=e.clientX-pointer.x,dy=e.clientY-pointer.y,dt=performance.now()-pointer.t;pointer=null;
+    if(Math.hypot(dx,dy)>45){if(Math.abs(dx)>Math.abs(dy))command(dx<0?"left":"right");else if(dy<0)command("forward");return}
+    if(dt<600){const now=performance.now();if(now-lastTap<330){lastTap=0;command("bolt")}else{lastTap=now;setTimeout(()=>{if(lastTap===now){lastTap=0;command("interact")}},340)}}
+  });
+  surface.addEventListener("pointercancel",()=>{if(pointer)clearTimeout(pointer.long);pointer=null});
+  document.addEventListener("visibilitychange",()=>{if(document.hidden&&state.running&&!state.paused)command("pause")});
+  reset();
+})();
+</script>
+</body>
+</html>
