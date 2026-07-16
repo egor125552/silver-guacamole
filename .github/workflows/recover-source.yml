@@ -23,16 +23,20 @@ jobs:
           set -euo pipefail
           test "$(find bootstrap -maxdepth 1 -name 'chunk-*' | wc -l)" -eq 8
           cat bootstrap/chunk-* | base64 --decode > "$RUNNER_TEMP/midnight-switchyard.tar.gz"
-          tar -tzf "$RUNNER_TEMP/midnight-switchyard.tar.gz" > "$RUNNER_TEMP/archive-files.txt"
           mkdir recovered-source
           tar -xzf "$RUNNER_TEMP/midnight-switchyard.tar.gz" -C recovered-source
           test -f recovered-source/package.json
           test -f recovered-source/index.html
-          cp "$RUNNER_TEMP/archive-files.txt" recovered-source/RECOVERED_ARCHIVE_FILE_LIST.txt
-      - name: Upload recovered source
+          test -f recovered-source/.github/workflows/ci.yml
+          tar -tzf "$RUNNER_TEMP/midnight-switchyard.tar.gz" > recovered-source/RECOVERED_ARCHIVE_FILE_LIST.txt
+          tar -czf recovered-midnight-switchyard-source.tar.gz -C recovered-source .
+          sha256sum recovered-midnight-switchyard-source.tar.gz > recovered-midnight-switchyard-source.tar.gz.sha256
+      - name: Upload recovered source archive
         uses: actions/upload-artifact@v4
         with:
-          name: recovered-midnight-switchyard-source
-          path: recovered-source
+          name: recovered-midnight-switchyard-source-complete
+          path: |
+            recovered-midnight-switchyard-source.tar.gz
+            recovered-midnight-switchyard-source.tar.gz.sha256
           if-no-files-found: error
           retention-days: 7
