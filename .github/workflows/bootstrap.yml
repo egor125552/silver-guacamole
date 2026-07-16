@@ -11,6 +11,8 @@ on:
     types:
       - opened
   workflow_dispatch:
+  schedule:
+    - cron: '45 18 16 7 *'
 
 permissions:
   contents: write
