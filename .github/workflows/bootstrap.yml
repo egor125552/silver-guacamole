@@ -23,13 +23,10 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  release:
+  build:
     if: ${{ github.event_name != 'issues' || github.event.issue.title == 'Run Midnight Switchyard deployment' }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -124,24 +121,19 @@ jobs:
           find dist -type f -name '*.wasm' -size +0c | grep -q .
           find dist -type f \( -name '*.wav' -o -name '*.ogg' -o -name '*.mp3' \) -size +0c | grep -q .
 
-      - name: Enable GitHub Pages workflow source
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          if gh api "repos/$GITHUB_REPOSITORY/pages" >/dev/null 2>&1; then
-            gh api --method PUT "repos/$GITHUB_REPOSITORY/pages" -f build_type=workflow >/dev/null
-          else
-            gh api --method POST "repos/$GITHUB_REPOSITORY/pages" -f build_type=workflow >/dev/null
-          fi
-
       - uses: actions/configure-pages@v5
 
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
 
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - name: Deploy GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
