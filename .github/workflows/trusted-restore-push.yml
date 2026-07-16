@@ -59,6 +59,7 @@ jobs:
             echo "sha_status=$sha_status"
             echo "compressed_bytes=$(wc -c < "$RUNNER_TEMP/production.patch.xz")"
             echo "patch_bytes=$(wc -c < "$RUNNER_TEMP/production.patch")"
+            echo "diagnostic_run=2"
           } > .recovery/diagnostic-result.txt
           git add .recovery/diagnostic-result.txt
           git config user.name 'github-actions[bot]'
