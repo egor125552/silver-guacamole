@@ -1,141 +1,160 @@
-name: Expand, verify and deploy Midnight Switchyard
+name: One-time trusted Midnight Switchyard restoration
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - bootstrap/**
-      - .github/workflows/bootstrap.yml
   issues:
-    types:
-      - opened
+    types: [opened]
   workflow_dispatch:
-  schedule:
-    - cron: '*/5 * * * *'
 
 permissions:
   contents: write
-  pages: write
-  id-token: write
   issues: write
 
-concurrency:
-  group: midnight-switchyard-release
-  cancel-in-progress: false
+env:
+  TARGET_BRANCH: agent/midnight-switchyard-production
+  AAJA_COMMIT: 4ad11f77b15163699d9213bc461d8aefb37c12f7
+  PATCH_SHA256: 88dd8f47791ea1ba254ba0ed2ce5846bac55cea94b4af2349963f039f19f3d42
 
 jobs:
-  build:
-    if: ${{ github.event_name != 'issues' || github.event.issue.title == 'Run Midnight Switchyard deployment' }}
+  restore:
+    if: github.event_name == 'workflow_dispatch' || github.event.issue.title == 'Restore Midnight Switchyard production source'
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v4
+      - name: Check out production recovery branch
+        uses: actions/checkout@v4
         with:
+          ref: ${{ env.TARGET_BRANCH }}
           fetch-depth: 0
+          persist-credentials: true
 
-      - name: Expand the complete project
-        shell: bash
-        run: |
-          set -euo pipefail
-          test "$(find bootstrap -maxdepth 1 -name 'chunk-*' | wc -l)" -eq 8
-          cat bootstrap/chunk-* | base64 --decode > "$RUNNER_TEMP/midnight-switchyard.tar.gz"
-          tar -tzf "$RUNNER_TEMP/midnight-switchyard.tar.gz" >/dev/null
-          mkdir "$RUNNER_TEMP/project"
-          tar -xzf "$RUNNER_TEMP/midnight-switchyard.tar.gz" -C "$RUNNER_TEMP/project"
-          test -f "$RUNNER_TEMP/project/package.json"
-          test -f "$RUNNER_TEMP/project/index.html"
+      - name: Check out exact Aaja commit
+        uses: actions/checkout@v4
+        with:
+          repository: egor125552/rust-Aaja-game-engine-web
+          ref: ${{ env.AAJA_COMMIT }}
+          path: .vendor/aaja-src
 
-          find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
-          cp -a "$RUNNER_TEMP/project/." .
-          rm -rf bootstrap .github/workflows/bootstrap.yml
-
-      - name: Commit expanded source immediately
-        shell: bash
-        run: |
-          set -euo pipefail
-          git add -A
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "Add complete Midnight Switchyard source [bootstrap-expanded]"
-          git push origin HEAD:main
-
-      - name: Install Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
 
-      - name: Install FFmpeg and Rust/WASM tooling
+      - name: Install reproducible build tools
         shell: bash
         run: |
           set -euo pipefail
           sudo apt-get update
-          sudo apt-get install -y ffmpeg
+          sudo apt-get install -y ffmpeg unzip xz-utils
           rustup set profile minimal
           rustup toolchain install stable --no-self-update
           rustup default stable
           rustup target add wasm32-unknown-unknown
           cargo install wasm-pack --locked --version 0.15.0
 
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Materialize pinned engine and production audio
+      - name: Reconstruct and verify source patch
         shell: bash
         run: |
           set -euo pipefail
-          has_script() {
-            node -e "const s=require('./package.json').scripts||{}; process.exit(Object.prototype.hasOwnProperty.call(s, process.argv[1]) ? 0 : 1)" "$1"
-          }
-          run_if_present() {
-            if has_script "$1"; then
-              echo "Running npm script: $1"
-              npm run "$1"
-            fi
-          }
-          run_if_present materialize
-          run_if_present materialize:engine
-          run_if_present materialize:audio
-          run_if_present build:aaja
-          run_if_present prepare:release
-          run_if_present release:prepare
-          run_if_present verify:audio
+          cat \
+            .recovery/patch-00 \
+            .recovery/patch-01 \
+            .recovery/patch-02 \
+            .recovery/patch-03 \
+            .recovery/patch-04 \
+            .recovery/patch-missing-04 \
+            .recovery/patch-05 \
+            .recovery/patch-06 \
+            .recovery/patch-07 \
+            .recovery/patch-08 \
+            .recovery/patch-09 \
+            .recovery/patch-10 \
+            | base64 --decode > "$RUNNER_TEMP/production.patch.xz"
+          xz --test "$RUNNER_TEMP/production.patch.xz"
+          xz --decompress --stdout "$RUNNER_TEMP/production.patch.xz" > "$RUNNER_TEMP/production.patch"
+          echo "$PATCH_SHA256  $RUNNER_TEMP/production.patch" | sha256sum --check
 
-      - name: Quality gate
+      - name: Recover original source and apply reviewed patch
         shell: bash
         run: |
           set -euo pipefail
-          npm run format:check --if-present
-          npm run lint --if-present
-          npm run typecheck --if-present
-          npm test --if-present
+          cat bootstrap/chunk-* | base64 --decode > "$RUNNER_TEMP/original.tar.gz"
+          tar -tzf "$RUNNER_TEMP/original.tar.gz" >/dev/null
+          mkdir "$RUNNER_TEMP/source"
+          tar -xzf "$RUNNER_TEMP/original.tar.gz" -C "$RUNNER_TEMP/source"
+          test -f "$RUNNER_TEMP/source/package.json"
+          test -f "$RUNNER_TEMP/source/index.html"
+          git -C "$RUNNER_TEMP/source" init -q
+          git -C "$RUNNER_TEMP/source" add -A
+          git -C "$RUNNER_TEMP/source" -c user.name=recovery -c user.email=recovery@example.invalid commit -qm baseline
+          git -C "$RUNNER_TEMP/source" apply --index "$RUNNER_TEMP/production.patch"
+          rm -rf "$RUNNER_TEMP/source/.git"
+          test -f "$RUNNER_TEMP/source/src/game/pathfinding.ts"
+          test -f "$RUNNER_TEMP/source/.github/workflows/ci.yml"
+          test ! -e "$RUNNER_TEMP/source/bootstrap"
+          test ! -e "$RUNNER_TEMP/source/.recovery"
+          test ! -e "$RUNNER_TEMP/source/.github/workflows/materialize.yml"
+          test ! -e "$RUNNER_TEMP/source/.github/workflows/bootstrap.yml"
 
-      - name: Production build
-        run: npm run build
-
-      - name: Verify Pages artifact
+      - name: Test and build exact Aaja commit
+        working-directory: .vendor/aaja-src
         shell: bash
         run: |
           set -euo pipefail
-          test -s dist/index.html
-          ! grep -R "localhost" dist --include='*.js' --include='*.html'
-          find dist -type f -name '*.wasm' -size +0c | grep -q .
-          find dist -type f \( -name '*.wav' -o -name '*.ogg' -o -name '*.mp3' \) -size +0c | grep -q .
+          npm ci
+          npm run test:rust
+          npm run test:ts
+          npm run build
+          npm run test:wasm
 
-      - uses: actions/configure-pages@v5
+      - name: Materialize pinned Aaja package
+        shell: bash
+        run: |
+          set -euo pipefail
+          target="$RUNNER_TEMP/source/vendor/aaja-package"
+          rm -rf "$target"
+          mkdir -p "$target"
+          cp -R .vendor/aaja-src/packages/engine/dist "$target/dist"
+          cp .vendor/aaja-src/packages/engine/package.json "$target/package.json"
+          printf '%s\n' "$AAJA_COMMIT" > "$target/ENGINE_COMMIT"
+          test -s "$target/dist/wasm/audio_game_core_bg.wasm"
 
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: dist
+      - name: Build licensed audio and verify complete project
+        working-directory: ${{ runner.temp }}/source
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci
+          npm run audio:build
+          npm run check
+          test -s dist/assets/audio_game_core_bg.wasm
+          test "$(find public/assets/audio -maxdepth 1 -name '*.ogg' | wc -l)" -eq 31
 
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - name: Deploy GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Replace recovery branch with ordinary source tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          cp -a "$RUNNER_TEMP/source/." .
+          test -f package.json
+          test -f src/scenes/GameScene.ts
+          test -s vendor/aaja-package/dist/wasm/audio_game_core_bg.wasm
+          test ! -e bootstrap
+          test ! -e .recovery
+          test ! -e .github/workflows/restore-production-source.yml
+          test ! -e .github/workflows/drive-probe.yml
+          test ! -e .github/workflows/bootstrap.yml
+
+      - name: Commit only to production branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add -A
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'Restore complete Midnight Switchyard production source'
+          git push origin "HEAD:$TARGET_BRANCH"
+
+      - name: Close restoration trigger
+        if: github.event_name == 'issues'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh issue close "${{ github.event.issue.number }}" --reason completed
