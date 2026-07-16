@@ -46,6 +46,16 @@ jobs:
           cp -a "$RUNNER_TEMP/project/." .
           rm -rf bootstrap .github/workflows/bootstrap.yml
 
+      - name: Commit expanded source immediately
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add -A
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Add complete Midnight Switchyard source [bootstrap-expanded]"
+          git push origin HEAD:main
+
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
@@ -109,16 +119,16 @@ jobs:
           find dist -type f -name '*.wasm' -size +0c | grep -q .
           find dist -type f \( -name '*.wav' -o -name '*.ogg' -o -name '*.mp3' \) -size +0c | grep -q .
 
-      - name: Commit expanded verified source
+      - name: Enable GitHub Pages workflow source
         shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          git add -A
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          if ! git diff --cached --quiet; then
-            git commit -m "Add complete verified Midnight Switchyard game"
-            git push origin HEAD:main
+          if gh api "repos/$GITHUB_REPOSITORY/pages" >/dev/null 2>&1; then
+            gh api --method PUT "repos/$GITHUB_REPOSITORY/pages" -f build_type=workflow >/dev/null
+          else
+            gh api --method POST "repos/$GITHUB_REPOSITORY/pages" -f build_type=workflow >/dev/null
           fi
 
       - uses: actions/configure-pages@v5
