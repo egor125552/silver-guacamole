@@ -1,0 +1,48 @@
+name: Expand game bootstrap
+
+on:
+  push:
+    branches:
+      - midnight-switchyard
+    paths:
+      - bootstrap/**
+      - .github/workflows/bootstrap.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: midnight-switchyard-bootstrap
+  cancel-in-progress: false
+
+jobs:
+  expand:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate and expand complete project
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(find bootstrap -maxdepth 1 -name 'chunk-*' | wc -l)" -eq 8
+          cat bootstrap/chunk-* | base64 --decode > "$RUNNER_TEMP/midnight-switchyard.tar.gz"
+          tar -tzf "$RUNNER_TEMP/midnight-switchyard.tar.gz" >/dev/null
+          mkdir "$RUNNER_TEMP/project"
+          tar -xzf "$RUNNER_TEMP/midnight-switchyard.tar.gz" -C "$RUNNER_TEMP/project"
+          test -f "$RUNNER_TEMP/project/package.json"
+          test -f "$RUNNER_TEMP/project/.github/workflows/materialize.yml"
+
+          find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          cp -a "$RUNNER_TEMP/project/." .
+          rm -rf bootstrap .github/workflows/bootstrap.yml
+
+          git add -A
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Add complete Midnight Switchyard game [bootstrap-expanded]"
+          git push origin HEAD:midnight-switchyard
