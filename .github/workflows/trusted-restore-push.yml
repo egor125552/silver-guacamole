@@ -38,7 +38,10 @@ jobs:
             .recovery/patch-missing-04 \
             .recovery/patch-05 \
             .recovery/patch-06 \
-            .recovery/patch-07 \
+            .recovery/patch-07-0 \
+            .recovery/patch-07-1 \
+            .recovery/patch-07-2 \
+            .recovery/patch-07-3 \
             .recovery/patch-08 \
             .recovery/patch-09 \
             .recovery/patch-10 \
@@ -59,7 +62,7 @@ jobs:
             echo "sha_status=$sha_status"
             echo "compressed_bytes=$(wc -c < "$RUNNER_TEMP/production.patch.xz")"
             echo "patch_bytes=$(wc -c < "$RUNNER_TEMP/production.patch")"
-            echo "diagnostic_run=2"
+            echo "diagnostic_run=3"
           } > .recovery/diagnostic-result.txt
           git add .recovery/diagnostic-result.txt
           git config user.name 'github-actions[bot]'
