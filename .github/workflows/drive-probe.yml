@@ -1,0 +1,21 @@
+name: Probe temporary production patch
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Download and verify patch transport
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 2 --output patch.txt 'https://drive.usercontent.google.com/download?id=1LDADi4Edcrz6AmvufSog0vPzsrokyage&export=download&confirm=t'
+          echo '23359ab7628c31a6fa6887d05af08ecf0d10b3c1730ee8d085fe1fdc9a0d390d  patch.txt' | sha256sum --check
