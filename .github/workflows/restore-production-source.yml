@@ -1,0 +1,147 @@
+name: Restore Midnight Switchyard production source
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+
+env:
+  AAJA_COMMIT: 4ad11f77b15163699d9213bc461d8aefb37c12f7
+  PATCH_SHA256: 88dd8f47791ea1ba254ba0ed2ce5846bac55cea94b4af2349963f039f19f3d42
+
+jobs:
+  restore:
+    if: github.head_ref == 'agent/midnight-switchyard-production'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - uses: actions/checkout@v4
+        with:
+          repository: egor125552/rust-Aaja-game-engine-web
+          ref: ${{ env.AAJA_COMMIT }}
+          path: .vendor/aaja-src
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install build tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg unzip xz-utils
+          rustup set profile minimal
+          rustup toolchain install stable --no-self-update
+          rustup default stable
+          rustup target add wasm32-unknown-unknown
+          cargo install wasm-pack --locked --version 0.15.0
+
+      - name: Reconstruct and verify source patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat \
+            .recovery/patch-00 \
+            .recovery/patch-01 \
+            .recovery/patch-02 \
+            .recovery/patch-03 \
+            .recovery/patch-04 \
+            .recovery/patch-missing-04 \
+            .recovery/patch-05 \
+            .recovery/patch-06 \
+            .recovery/patch-07 \
+            .recovery/patch-08 \
+            .recovery/patch-09 \
+            .recovery/patch-10 \
+            | base64 --decode > "$RUNNER_TEMP/production.patch.xz"
+          xz --test "$RUNNER_TEMP/production.patch.xz"
+          xz --decompress --stdout "$RUNNER_TEMP/production.patch.xz" > "$RUNNER_TEMP/production.patch"
+          echo "$PATCH_SHA256  $RUNNER_TEMP/production.patch" | sha256sum --check
+
+      - name: Recover original hidden source and apply patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat bootstrap/chunk-* | base64 --decode > "$RUNNER_TEMP/original.tar.gz"
+          tar -tzf "$RUNNER_TEMP/original.tar.gz" >/dev/null
+          mkdir "$RUNNER_TEMP/source"
+          tar -xzf "$RUNNER_TEMP/original.tar.gz" -C "$RUNNER_TEMP/source"
+          test -f "$RUNNER_TEMP/source/package.json"
+          test -f "$RUNNER_TEMP/source/index.html"
+          git -C "$RUNNER_TEMP/source" init -q
+          git -C "$RUNNER_TEMP/source" add -A
+          git -C "$RUNNER_TEMP/source" -c user.name=recovery -c user.email=recovery@example.invalid commit -qm baseline
+          git -C "$RUNNER_TEMP/source" apply --index "$RUNNER_TEMP/production.patch"
+          rm -rf "$RUNNER_TEMP/source/.git"
+          test -f "$RUNNER_TEMP/source/src/game/pathfinding.ts"
+          test -f "$RUNNER_TEMP/source/.github/workflows/ci.yml"
+          test ! -e "$RUNNER_TEMP/source/bootstrap"
+          test ! -e "$RUNNER_TEMP/source/.recovery"
+          test ! -e "$RUNNER_TEMP/source/.github/workflows/materialize.yml"
+
+      - name: Test and build exact Aaja commit
+        working-directory: .vendor/aaja-src
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci
+          npm run test:rust
+          npm run test:ts
+          npm run build
+          npm run test:wasm
+
+      - name: Materialize pinned Aaja package
+        shell: bash
+        run: |
+          set -euo pipefail
+          target="$RUNNER_TEMP/source/vendor/aaja-package"
+          rm -rf "$target"
+          mkdir -p "$target"
+          cp -R .vendor/aaja-src/packages/engine/dist "$target/dist"
+          cp .vendor/aaja-src/packages/engine/package.json "$target/package.json"
+          printf '%s\n' "$AAJA_COMMIT" > "$target/ENGINE_COMMIT"
+          test -s "$target/dist/wasm/audio_game_core_bg.wasm"
+
+      - name: Build licensed audio and verify project
+        working-directory: ${{ runner.temp }}/source
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci
+          npm run audio:build
+          npm run check
+          test -s dist/assets/audio_game_core_bg.wasm
+          test "$(find public/assets/audio -maxdepth 1 -name '*.ogg' | wc -l)" -eq 31
+
+      - name: Replace recovery branch with ordinary source files
+        shell: bash
+        run: |
+          set -euo pipefail
+          find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          cp -a "$RUNNER_TEMP/source/." .
+          test -f package.json
+          test -f src/scenes/GameScene.ts
+          test -s vendor/aaja-package/dist/wasm/audio_game_core_bg.wasm
+          test ! -e bootstrap
+          test ! -e .recovery
+          test ! -e .github/workflows/restore-production-source.yml
+          test ! -e .github/workflows/drive-probe.yml
+
+      - name: Commit restored production source
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add -A
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'Restore complete Midnight Switchyard production source'
+          git push origin HEAD:agent/midnight-switchyard-production
