@@ -1,9 +1,9 @@
 decode_status=0
-xz_status=1
-decompress_status=1
+xz_status=0
+decompress_status=0
 expected_sha=88dd8f47791ea1ba254ba0ed2ce5846bac55cea94b4af2349963f039f19f3d42
-actual_sha=a9deb6ef9443b2384575fd05efb0ed28ec3ec7cacc03a5f822dc47db69e68a51
-sha_status=1
+actual_sha=88dd8f47791ea1ba254ba0ed2ce5846bac55cea94b4af2349963f039f19f3d42
+sha_status=0
 compressed_bytes=62756
-patch_bytes=196888
-diagnostic_run=2
+patch_bytes=292138
+diagnostic_run=3
