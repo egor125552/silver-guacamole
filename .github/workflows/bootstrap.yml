@@ -1,0 +1,132 @@
+name: Expand, verify and deploy Midnight Switchyard
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - bootstrap/**
+      - .github/workflows/bootstrap.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: midnight-switchyard-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Expand the complete project
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(find bootstrap -maxdepth 1 -name 'chunk-*' | wc -l)" -eq 8
+          cat bootstrap/chunk-* | base64 --decode > "$RUNNER_TEMP/midnight-switchyard.tar.gz"
+          tar -tzf "$RUNNER_TEMP/midnight-switchyard.tar.gz" >/dev/null
+          mkdir "$RUNNER_TEMP/project"
+          tar -xzf "$RUNNER_TEMP/midnight-switchyard.tar.gz" -C "$RUNNER_TEMP/project"
+          test -f "$RUNNER_TEMP/project/package.json"
+          test -f "$RUNNER_TEMP/project/index.html"
+
+          find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          cp -a "$RUNNER_TEMP/project/." .
+          rm -rf bootstrap .github/workflows/bootstrap.yml
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install FFmpeg and Rust/WASM tooling
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+          rustup set profile minimal
+          rustup toolchain install stable --no-self-update
+          rustup default stable
+          rustup target add wasm32-unknown-unknown
+          cargo install wasm-pack --locked --version 0.15.0
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Materialize pinned engine and production audio
+        shell: bash
+        run: |
+          set -euo pipefail
+          has_script() {
+            node -e "const s=require('./package.json').scripts||{}; process.exit(Object.prototype.hasOwnProperty.call(s, process.argv[1]) ? 0 : 1)" "$1"
+          }
+          run_if_present() {
+            if has_script "$1"; then
+              echo "Running npm script: $1"
+              npm run "$1"
+            fi
+          }
+          run_if_present materialize
+          run_if_present materialize:engine
+          run_if_present materialize:audio
+          run_if_present build:aaja
+          run_if_present prepare:release
+          run_if_present release:prepare
+          run_if_present verify:audio
+
+      - name: Quality gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run format:check --if-present
+          npm run lint --if-present
+          npm run typecheck --if-present
+          npm test --if-present
+
+      - name: Production build
+        run: npm run build
+
+      - name: Verify Pages artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s dist/index.html
+          ! grep -R "localhost" dist --include='*.js' --include='*.html'
+          find dist -type f -name '*.wasm' -size +0c | grep -q .
+          find dist -type f \( -name '*.wav' -o -name '*.ogg' -o -name '*.mp3' \) -size +0c | grep -q .
+
+      - name: Commit expanded verified source
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add -A
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if ! git diff --cached --quiet; then
+            git commit -m "Add complete verified Midnight Switchyard game"
+            git push origin HEAD:main
+          fi
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+      - name: Deploy GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
