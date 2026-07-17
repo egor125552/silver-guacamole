@@ -75,7 +75,7 @@ jobs:
           add_status=$?
           git -C "$source_dir" -c user.name=recovery -c user.email=recovery@example.invalid commit -qm baseline >>"$log_file" 2>&1
           baseline_status=$?
-          git -C "$source_dir" apply --index "$patch_file" >>"$log_file" 2>&1
+          git -C "$source_dir" apply --index --exclude=RECOVERED_ARCHIVE_FILE_LIST.txt "$patch_file" >>"$log_file" 2>&1
           apply_status=$?
           rm -rf "$source_dir/.git"
 
