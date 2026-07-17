@@ -1,7 +1,7 @@
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { basename, dirname, resolve } from "node:path";
+import { chmodSync, copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
 
 const root = resolve(import.meta.dirname, "..");
 const sourceRoot = resolve(root, "assets/audio/sources");
@@ -9,10 +9,27 @@ const downloadedRoot = resolve(root, ".audio-build/downloaded-sources");
 const outDir = resolve(root, "public/assets/audio");
 const manifestPath = resolve(root, "assets/audio/manifest.json");
 const tempDir = resolve(root, ".audio-build");
+
+function makeTreeWritable(path) {
+  if (!existsSync(path)) return;
+  chmodSync(path, 0o700);
+  for (const entry of readdirSync(path, { withFileTypes: true })) {
+    const child = resolve(path, entry.name);
+    if (entry.isDirectory()) makeTreeWritable(child);
+    else chmodSync(child, 0o600);
+  }
+}
+
+function removeTree(path) {
+  if (!existsSync(path)) return;
+  makeTreeWritable(path);
+  rmSync(path, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
+}
+
 rmSync(outDir, { recursive: true, force: true });
 mkdirSync(outDir, { recursive: true });
 mkdirSync(dirname(manifestPath), { recursive: true });
-rmSync(tempDir, { recursive: true, force: true });
+removeTree(tempDir);
 mkdirSync(tempDir, { recursive: true });
 
 const packs = {
@@ -86,7 +103,7 @@ function ensureSources() {
     run("curl", ["--fail", "--location", "--retry", "3", pack.archive, "-o", archive]);
     if (sha256(archive) !== pack.archiveSha256) throw new Error(`Archive SHA-256 mismatch for ${packId}`);
     const target = resolve(downloadedRoot, packId);
-    rmSync(target, { recursive: true, force: true });
+    removeTree(target);
     mkdirSync(target, { recursive: true });
     run("unzip", ["-q", archive, "-d", target]);
   }
@@ -137,5 +154,5 @@ for (const spec of specs) {
 const manifest = { schemaVersion: 3, engineCommit: "4ad11f77b15163699d9213bc461d8aefb37c12f7", sources, assets };
 writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
 copyFileSync(manifestPath, resolve(outDir, "manifest.json"));
-rmSync(tempDir, { recursive: true, force: true });
+removeTree(tempDir);
 console.log(`Built ${assets.length} production audio assets from ${Object.keys(sources).length} official CC0 packs.`);
