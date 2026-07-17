@@ -201,7 +201,10 @@ async function coolCarriedCore(page, mode, point) {
 export async function fullRun(page, mode, options = {}) {
   const t = await targets(page);
   const doors = t.doors;
-  if (options.useBolt !== false) await action(page, mode, "special");
+  if (options.useBolt !== false) {
+    await orient(page, mode, Math.PI);
+    await action(page, mode, "special");
+  }
   await useAt(page, mode, t.cores[0]);
   await openDoor(page, mode, "yard-north", doors["yard-north"]);
   await useAt(page, mode, t.bay);
