@@ -39,7 +39,6 @@ const listPath = resolve(tempDir, "assets.tsv");
 writeFileSync(listPath, manifest.assets.map((asset) => `${asset.id}\t${resolve(root, asset.file)}`).join("\n") + "\n");
 const batchScript = String.raw`set -euo pipefail
 while IFS=$'\t' read -r id file; do
-  ffprobe -v error -show_entries stream=codec_name,sample_rate,channels:format=duration,size -of default=nw=1:nk=1 "$file" | paste -sd '|' - | sed "s#^#$id|#"
   ffmpeg -y -v error -i "$file" -ac 1 -ar 48000 -f s16le "$OUT/$id.s16le"
 done < "$LIST"`;
 const result = spawnSync("bash", ["-lc", batchScript], {
@@ -48,10 +47,25 @@ const result = spawnSync("bash", ["-lc", batchScript], {
   env: { ...process.env, LIST: listPath, OUT: tempDir },
 });
 if (result.status !== 0) throw new Error(`FFmpeg batch decode failed: ${result.stderr || result.stdout}`);
+
 const metadata = new Map();
-for (const line of result.stdout.trim().split("\n")) {
-  const [id, codec, sampleRate, channels, duration, size] = line.split("|");
-  metadata.set(id, { codec, sampleRate: Number(sampleRate), channels: Number(channels), duration: Number(duration), size: Number(size) });
+for (const asset of manifest.assets) {
+  const file = resolve(root, asset.file);
+  const probe = JSON.parse(run("ffprobe", [
+    "-v", "error",
+    "-show_entries", "stream=codec_name,sample_rate,channels:format=duration,size",
+    "-of", "json",
+    file,
+  ]));
+  const stream = probe.streams?.[0] ?? {};
+  const format = probe.format ?? {};
+  metadata.set(asset.id, {
+    codec: stream.codec_name ?? "unknown",
+    sampleRate: Number(stream.sample_rate ?? 0),
+    channels: Number(stream.channels ?? 0),
+    duration: Number(format.duration ?? 0),
+    size: Number(format.size ?? 0),
+  });
 }
 
 function spectralCentroid(pcm, sampleRate) {
