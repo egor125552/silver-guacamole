@@ -27,9 +27,9 @@ function testPath(scene: any, x: number, y: number): Point[] {
         return path;
     const dx = next.x - position.x;
     const dy = next.y - position.y;
-    if (Math.abs(dx) >= Math.abs(dy) && Math.abs(dy) > 12)
+    if (Math.abs(dx) >= Math.abs(dy) && Math.abs(dy) > 20)
         return [position, { x: position.x, y: next.y }, ...path.slice(1)];
-    if (Math.abs(dy) > Math.abs(dx) && Math.abs(dx) > 12)
+    if (Math.abs(dy) > Math.abs(dx) && Math.abs(dx) > 20)
         return [position, { x: next.x, y: position.y }, ...path.slice(1)];
     return path;
 }
