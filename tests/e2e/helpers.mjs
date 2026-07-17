@@ -73,7 +73,7 @@ async function turnToward(page, mode, delta) {
   } else {
     await gestureSwipe(page, direction > 0 ? 80 : -80, 0);
   }
-  await page.waitForTimeout(35);
+  await page.waitForTimeout(25);
 }
 
 async function orient(page, mode, desired) {
@@ -89,38 +89,40 @@ async function orient(page, mode, desired) {
 
 async function forwardStep(page, mode) {
   if (mode === "keyboard") {
+    await page.keyboard.down("Shift");
     await page.keyboard.down("w");
-    await page.waitForTimeout(180);
+    await page.waitForTimeout(120);
     await page.keyboard.up("w");
+    await page.keyboard.up("Shift");
   } else if (mode === "voiceover") {
-    await page.getByRole("button", { name: "Вперёд", exact: true }).click();
-    await page.waitForTimeout(380);
+    await page.getByRole("button", { name: "Быстро вперёд", exact: true }).click();
+    await page.waitForTimeout(235);
   } else {
     await gestureSwipe(page, 0, -82);
-    await page.waitForTimeout(550);
+    await page.waitForTimeout(215);
   }
-  await page.waitForTimeout(45);
+  await page.waitForTimeout(25);
 }
 
 async function backwardAlignmentStep(page, mode) {
   if (mode === "keyboard") {
     await page.keyboard.down("s");
-    await page.waitForTimeout(160);
+    await page.waitForTimeout(145);
     await page.keyboard.up("s");
   } else if (mode === "voiceover") {
     await page.getByRole("button", { name: "Назад", exact: true }).click();
-    await page.waitForTimeout(360);
+    await page.waitForTimeout(205);
   } else {
     await gestureSwipe(page, 0, 82);
-    await page.waitForTimeout(430);
+    await page.waitForTimeout(215);
   }
-  await page.waitForTimeout(45);
+  await page.waitForTimeout(25);
 }
 
 export async function navigate(page, mode, destination, tolerance = 54) {
   for (let attempt = 0; attempt < 220; attempt += 1) {
     const state = await snapshot(page);
-    if (state.phase === "lost") throw new Error(`Lost while navigating to ${destination.x},${destination.y}`);
+    if (state.phase === "lost") throw new Error(`Lost while navigating to ${destination.x},${destination.y}; player=${state.player.x.toFixed(1)},${state.player.y.toFixed(1)} health=${state.health} delivered=${state.delivered.length}`);
     if (Math.hypot(state.player.x - destination.x, state.player.y - destination.y) <= tolerance) return;
     const path = await page.evaluate(([x, y]) => window.__SWITCHYARD_TEST__.planPath(x, y), [destination.x, destination.y]);
     if (!Array.isArray(path) || path.length === 0) throw new Error(`No A* path to ${destination.x},${destination.y}`);
@@ -170,7 +172,7 @@ export async function action(page, mode, command = "interact") {
   } else if (command === "stop") {
     await gestureSwipe(page, 0, 170, 760);
   }
-  await page.waitForTimeout(80);
+  await page.waitForTimeout(70);
 }
 
 async function useAt(page, mode, point, command = "interact") {
@@ -199,6 +201,7 @@ async function coolCarriedCore(page, mode, point) {
 export async function fullRun(page, mode, options = {}) {
   const t = await targets(page);
   const doors = t.doors;
+  if (options.useBolt !== false) await action(page, mode, "special");
   await useAt(page, mode, t.cores[0]);
   await openDoor(page, mode, "yard-north", doors["yard-north"]);
   await useAt(page, mode, t.bay);
