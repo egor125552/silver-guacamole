@@ -64,10 +64,8 @@ async function turnToward(page, mode, delta) {
   const direction = delta > 0 ? 1 : -1;
   if (mode === "keyboard") {
     const key = direction > 0 ? "d" : "a";
-    const duration = Math.max(24, Math.min(160, Math.round(Math.abs(delta) / 0.0026)));
-    await page.keyboard.down(key);
-    await page.waitForTimeout(duration);
-    await page.keyboard.up(key);
+    const duration = Math.max(12, Math.min(140, Math.round(Math.abs(delta) / 0.0026)));
+    await page.keyboard.press(key, { delay: duration });
   } else if (mode === "voiceover") {
     await page.getByRole("button", { name: direction > 0 ? "Повернуть вправо" : "Повернуть влево", exact: true }).click();
   } else {
@@ -77,7 +75,7 @@ async function turnToward(page, mode, delta) {
 }
 
 async function orient(page, mode, desired) {
-  for (let attempt = 0; attempt < 24; attempt += 1) {
+  for (let attempt = 0; attempt < 32; attempt += 1) {
     const state = await snapshot(page);
     const delta = normalize(desired - state.angle);
     if (Math.abs(delta) < 0.12) return;
@@ -203,8 +201,8 @@ async function crossAndCloseVerticalDoor(page, mode, id, point) {
   await expect.poll(async () => (await snapshot(page)).doors[id], { timeout: 3_000 }).toBe(false);
 }
 
-async function distractBehindClosedGate(page, mode) {
-  await orient(page, mode, Math.PI);
+async function distractSouthOfAmber(page, mode) {
+  await orient(page, mode, Math.PI / 2);
   await action(page, mode, "special");
 }
 
@@ -224,8 +222,8 @@ export async function fullRun(page, mode, options = {}) {
   const t = await targets(page);
   const doors = t.doors;
   await useAt(page, mode, t.cores[0]);
+  if (options.useBolt !== false) await distractSouthOfAmber(page, mode);
   await crossAndCloseVerticalDoor(page, mode, "yard-north", doors["yard-north"]);
-  if (options.useBolt !== false) await distractBehindClosedGate(page, mode);
   if (options.useCooling) await coolCarriedCore(page, mode, t.coolPads[1]);
   await useAt(page, mode, t.bay);
 
