@@ -183,9 +183,9 @@ async function useAt(page, mode, point, command = "interact") {
 async function approachDoor(page, mode, point, orientation) {
   const state = await snapshot(page);
   const approach = orientation === "vertical"
-    ? { x: point.x + (state.player.x < point.x ? -64 : 64), y: point.y }
-    : { x: point.x, y: point.y + (state.player.y < point.y ? -64 : 64) };
-  await navigate(page, mode, approach, 24);
+    ? { x: point.x + (state.player.x < point.x ? -52 : 52), y: point.y }
+    : { x: point.x, y: point.y + (state.player.y < point.y ? -52 : 52) };
+  await navigate(page, mode, approach, 8);
 }
 
 async function openDoor(page, mode, id, point, orientation = "horizontal") {
@@ -198,7 +198,7 @@ async function crossAndCloseVerticalDoor(page, mode, id, point) {
   const before = await snapshot(page);
   const direction = before.player.x < point.x ? 1 : -1;
   await openDoor(page, mode, id, point, "vertical");
-  await navigate(page, mode, { x: point.x + direction * 64, y: point.y }, 18);
+  await navigate(page, mode, { x: point.x + direction * 52, y: point.y }, 8);
   await action(page, mode, "interact");
   await expect.poll(async () => (await snapshot(page)).doors[id], { timeout: 3_000 }).toBe(false);
 }
