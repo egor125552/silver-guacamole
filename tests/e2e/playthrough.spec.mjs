@@ -1,12 +1,11 @@
 import { test, expect } from "@playwright/test";
-import { fastFullRun } from "./fast-route.mjs";
-import { snapshot, startGame } from "./helpers.mjs";
+import { fullRun, snapshot, startGame } from "./helpers.mjs";
 
 for (const mode of ["keyboard", "voiceover", "gestures"]) {
   test(`complete input-driven run through ${mode}`, async ({ page, browserName }) => {
     test.skip(browserName !== "chromium", "Full adapter playthroughs run in Chromium; cross-browser smoke is separate.");
     const errors = await startGame(page, mode);
-    await fastFullRun(page, mode, { useBolt: true, useCooling: true });
+    await fullRun(page, mode, { useBolt: true, useCooling: true });
     const state = await snapshot(page);
     expect(state.delivered).toHaveLength(4);
     expect(state.activeSources).toBeLessThanOrEqual(32);
@@ -21,7 +20,7 @@ for (const mode of ["keyboard", "voiceover", "gestures"]) {
 test("win persists, reloads, replays and full reset clears versioned save", async ({ page, browserName }) => {
   test.skip(browserName !== "chromium");
   await startGame(page, "keyboard");
-  await fastFullRun(page, "keyboard", { useBolt: false, useCooling: true });
+  await fullRun(page, "keyboard", { useBolt: false, useCooling: true });
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem("midnight-switchyard-save-v2")));
   expect(saved.version).toBe(2);
   expect(saved.completedRuns).toBe(1);
