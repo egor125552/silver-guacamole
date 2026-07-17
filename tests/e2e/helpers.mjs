@@ -180,15 +180,25 @@ async function useAt(page, mode, point, command = "interact") {
   await action(page, mode, command);
 }
 
-async function openDoor(page, mode, id, point) {
-  await navigate(page, mode, point);
+async function approachDoor(page, mode, point, orientation) {
+  const state = await snapshot(page);
+  const approach = orientation === "vertical"
+    ? { x: point.x + (state.player.x < point.x ? -64 : 64), y: point.y }
+    : { x: point.x, y: point.y + (state.player.y < point.y ? -64 : 64) };
+  await navigate(page, mode, approach, 24);
+}
+
+async function openDoor(page, mode, id, point, orientation = "horizontal") {
+  await approachDoor(page, mode, point, orientation);
   if (!(await snapshot(page)).doors[id]) await action(page, mode, "interact");
   await expect.poll(async () => (await snapshot(page)).doors[id], { timeout: 3_000 }).toBe(true);
 }
 
 async function crossAndCloseVerticalDoor(page, mode, id, point) {
-  await openDoor(page, mode, id, point);
-  await navigate(page, mode, { x: point.x + 64, y: point.y }, 18);
+  const before = await snapshot(page);
+  const direction = before.player.x < point.x ? 1 : -1;
+  await openDoor(page, mode, id, point, "vertical");
+  await navigate(page, mode, { x: point.x + direction * 64, y: point.y }, 18);
   await action(page, mode, "interact");
   await expect.poll(async () => (await snapshot(page)).doors[id], { timeout: 3_000 }).toBe(false);
 }
