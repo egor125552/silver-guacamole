@@ -1,0 +1,139 @@
+name: Finalize Midnight Switchyard production branch
+
+on:
+  pull_request_target:
+    branches: [main]
+    types: [closed]
+
+permissions:
+  contents: write
+
+env:
+  TARGET_BRANCH: agent/midnight-switchyard-production
+  PATCH_SHA256: 88dd8f47791ea1ba254ba0ed2ce5846bac55cea94b4af2349963f039f19f3d42
+  AAJA_ARTIFACT_ID: 8391391061
+  KENNEY_ARTIFACT_ID: 8391352733
+
+jobs:
+  finalize:
+    if: github.event.pull_request.head.ref == 'agent/finalize-midnight-event'
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    concurrency:
+      group: finalize-midnight-production
+      cancel-in-progress: false
+    steps:
+      - name: Check out fixed recovery branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_BRANCH }}
+          fetch-depth: 0
+          persist-credentials: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install FFmpeg and archive tools
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg unzip xz-utils
+
+      - name: Reconstruct verified project source
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat \
+            .recovery/patch-00 \
+            .recovery/patch-01 \
+            .recovery/patch-02 \
+            .recovery/patch-03 \
+            .recovery/patch-04 \
+            .recovery/patch-missing-04 \
+            .recovery/patch-05 \
+            .recovery/patch-06 \
+            .recovery/patch-07-0 \
+            .recovery/patch-07-1 \
+            .recovery/patch-07-2 \
+            .recovery/patch-07-3 \
+            .recovery/patch-08 \
+            .recovery/patch-09 \
+            .recovery/patch-10 \
+            | base64 --decode > "$RUNNER_TEMP/production.patch.xz"
+          xz --test "$RUNNER_TEMP/production.patch.xz"
+          xz --decompress --stdout "$RUNNER_TEMP/production.patch.xz" > "$RUNNER_TEMP/production.patch"
+          echo "$PATCH_SHA256  $RUNNER_TEMP/production.patch" | sha256sum --check
+
+          cat bootstrap/chunk-* | base64 --decode > "$RUNNER_TEMP/original.tar.gz"
+          tar -tzf "$RUNNER_TEMP/original.tar.gz" >/dev/null
+          mkdir "$RUNNER_TEMP/source"
+          tar -xzf "$RUNNER_TEMP/original.tar.gz" -C "$RUNNER_TEMP/source"
+          git -C "$RUNNER_TEMP/source" init -q
+          git -C "$RUNNER_TEMP/source" add -A
+          git -C "$RUNNER_TEMP/source" -c user.name=recovery -c user.email=recovery@example.invalid commit -qm baseline
+          git -C "$RUNNER_TEMP/source" apply --index --exclude=RECOVERED_ARCHIVE_FILE_LIST.txt "$RUNNER_TEMP/production.patch"
+          rm -rf "$RUNNER_TEMP/source/.git"
+          rm -f "$RUNNER_TEMP/source/RECOVERED_ARCHIVE_FILE_LIST.txt"
+
+      - name: Download exact prebuilt Aaja and official Kenney packs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          api="${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/actions/artifacts"
+          curl --fail --location --retry 3 \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H 'Accept: application/vnd.github+json' \
+            "$api/$AAJA_ARTIFACT_ID/zip" -o "$RUNNER_TEMP/aaja.zip"
+          curl --fail --location --retry 3 \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H 'Accept: application/vnd.github+json' \
+            "$api/$KENNEY_ARTIFACT_ID/zip" -o "$RUNNER_TEMP/kenney.zip"
+          mkdir "$RUNNER_TEMP/aaja" "$RUNNER_TEMP/kenney"
+          unzip -q "$RUNNER_TEMP/aaja.zip" -d "$RUNNER_TEMP/aaja"
+          unzip -q "$RUNNER_TEMP/kenney.zip" -d "$RUNNER_TEMP/kenney"
+          (cd "$RUNNER_TEMP/aaja" && sha256sum --check aaja-package.tar.gz.sha256)
+          tar -xzf "$RUNNER_TEMP/aaja/aaja-package.tar.gz" -C "$RUNNER_TEMP/source/vendor"
+          test -s "$RUNNER_TEMP/source/vendor/aaja-package/dist/wasm/audio_game_core_bg.wasm"
+
+      - name: Build 31 licensed production sounds
+        shell: bash
+        run: |
+          set -euo pipefail
+          for pack in impact-sounds interface-sounds rpg-audio sci-fi-sounds; do
+            mkdir -p "$RUNNER_TEMP/source/assets/audio/sources/$pack"
+            cp -a "$RUNNER_TEMP/kenney/unpacked/$pack/Audio/." "$RUNNER_TEMP/source/assets/audio/sources/$pack/"
+            cp "$RUNNER_TEMP/kenney/unpacked/$pack/License.txt" "$RUNNER_TEMP/source/assets/audio/sources/$pack/License.txt"
+          done
+          cd "$RUNNER_TEMP/source"
+          npm ci
+          npm run audio:build
+          npm run audio:verify
+          find assets/audio/sources -type f ! -name License.txt -delete
+          find assets/audio/sources -type d -empty -delete || true
+          npm run format:check
+          npm run lint
+          npm run test:unit
+          npm run repo:verify
+          npm run build
+          test "$(find public/assets/audio -maxdepth 1 -name '*.ogg' | wc -l)" -eq 31
+          test -s dist/assets/audio_game_core_bg.wasm
+          rm -rf node_modules dist .audio-build
+
+      - name: Replace recovery branch atomically
+        shell: bash
+        run: |
+          set -euo pipefail
+          find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          cp -a "$RUNNER_TEMP/source/." .
+          test -f package.json
+          test -f src/scenes/GameScene.ts
+          test -f src/game/pathfinding.ts
+          test -s vendor/aaja-package/dist/wasm/audio_game_core_bg.wasm
+          test "$(find public/assets/audio -maxdepth 1 -name '*.ogg' | wc -l)" -eq 31
+          test ! -e bootstrap
+          test ! -e .recovery
+          git add -A
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'Restore complete Midnight Switchyard production source'
+          git push --force origin "HEAD:$TARGET_BRANCH"
