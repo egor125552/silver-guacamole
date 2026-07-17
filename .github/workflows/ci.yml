@@ -1,6 +1,8 @@
 name: CI
 
 on:
+  push:
+    branches: [main]
   pull_request:
 
 permissions:
@@ -10,30 +12,140 @@ env:
   CI: true
 
 jobs:
-  audio-verification-diagnostics:
+  quality:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 55
     steps:
       - uses: actions/checkout@v4
-      - name: Install audio build tools
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install production build tools
         run: sudo apt-get update && sudo apt-get install -y ffmpeg unzip curl
-      - name: Build licensed production audio
-        run: node scripts/build-audio.mjs
-      - name: Verify production audio and capture full output
+      - name: Configure Rust and wasm-pack
         shell: bash
         run: |
-          set +e
-          node scripts/verify-audio.mjs > audio-verify.log 2>&1
-          code=$?
-          cat audio-verify.log
-          printf '%s\n' "$code" > audio-verify.exit
-          exit "$code"
-      - name: Upload audio verification diagnostics
-        if: always()
-        uses: actions/upload-artifact@v4
+          set -euo pipefail
+          rustup set profile minimal
+          rustup toolchain install stable --no-self-update
+          rustup default stable
+          rustup target add wasm32-unknown-unknown
+          cargo install wasm-pack --locked --version 0.15.0
+      - name: Materialize pinned Aaja engine
+        run: npm run engine:materialize
+      - name: Install game dependencies
+        run: npm ci
+      - name: Check formatting
+        run: npm run format:check
+      - name: Lint and typecheck
+        run: npm run lint
+      - name: Run unit and contract tests
+        run: npm run test:unit
+      - name: Build licensed production audio
+        run: npm run audio:build
+      - name: Verify production audio
+        run: npm run audio:verify
+      - name: Verify repository contracts
+        run: npm run repo:verify
+      - name: Build production game
+        run: npm run build
+      - name: Verify production artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s dist/index.html
+          test -s dist/assets/audio/manifest.json
+          test -s vendor/aaja-package/dist/wasm/audio_game_core_bg.wasm
+          test -s dist/assets/audio_game_core_bg.wasm
+          test "$(find dist/assets/audio -maxdepth 1 -name '*.ogg' | wc -l)" -eq 31
+          ! grep -R "localhost\|127.0.0.1" dist --include='*.js' --include='*.html'
+          test "$(du -sb dist | cut -f1)" -lt 50000000
+      - uses: actions/upload-artifact@v4
         with:
-          name: audio-verify-diagnostics
+          name: production-dist
+          path: dist
+          retention-days: 7
+
+  chromium-playthroughs:
+    needs: [quality]
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - uses: actions/download-artifact@v4
+        with:
+          name: production-dist
+          path: dist
+      - run: npx playwright install --with-deps chromium
+      - name: Full command-driven playthroughs, losses, restart, save and reset
+        run: npx playwright test --project=chromium
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-chromium
           path: |
-            audio-verify.log
-            audio-verify.exit
-          retention-days: 3
+            playwright-report
+            test-results
+          retention-days: 7
+
+  cross-browser-smoke:
+    needs: [quality]
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [firefox, webkit]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - uses: actions/download-artifact@v4
+        with:
+          name: production-dist
+          path: dist
+      - run: npx playwright install --with-deps ${{ matrix.project }}
+      - run: npx playwright test tests/e2e/smoke.spec.mjs --project=${{ matrix.project }}
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-${{ matrix.project }}
+          path: |
+            playwright-report
+            test-results
+          retention-days: 7
+
+  mobile-webkit-gestures:
+    needs: [quality]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - uses: actions/download-artifact@v4
+        with:
+          name: production-dist
+          path: dist
+      - run: npx playwright install --with-deps webkit
+      - run: npx playwright test tests/e2e/smoke.spec.mjs --project=mobile-webkit
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-mobile-webkit
+          path: |
+            playwright-report
+            test-results
+          retention-days: 7
