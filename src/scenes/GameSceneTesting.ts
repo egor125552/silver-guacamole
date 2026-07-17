@@ -34,11 +34,19 @@ function testPath(scene: any, x: number, y: number): Point[] {
     return path;
 }
 
+function moveTestPlayer(scene: any, x: number, y: number): void {
+    scene.services.input.clearHeld();
+    scene.playerController.stop();
+    scene.player.setPosition(x, y);
+    scene.playerBody.reset(x, y);
+}
+
 export function installTestHooks(scene: any): void {
     scene.detachTestBridge?.();
     scene.detachTestBridge = installTestBridge(scene.testMode, {
         snapshot: () => scene.testSnapshot(),
         planPath: (x, y) => testPath(scene, x, y),
+        moveTo: (x, y) => moveTestPlayer(scene, x, y),
         targets: () => ({ bay: { ...WORLD.bay }, exit: { ...WORLD.exit }, cores: WORLD.cores.map((item) => ({ ...item.position })),
             switches: WORLD.switches.map((item) => ({ ...item.position })), coolPads: WORLD.coolPads.map((item, index) => ({ ...(index === 2 ? (WORLD.coolPads[1] ?? item) : item) })), lockers: WORLD.lockers.map((item) => ({ ...item.position })),
             repairs: WORLD.repairs.map((item) => ({ ...item.position })), doors: Object.fromEntries(WORLD.doors.map((item) => [item.id, { ...item.position }])) }),
