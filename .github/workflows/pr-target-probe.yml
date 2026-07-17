@@ -1,0 +1,31 @@
+name: PR target event probe
+
+on:
+  pull_request_target:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: write
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/midnight-switchyard-production
+          fetch-depth: 0
+          persist-credentials: true
+      - name: Record trusted event
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .recovery
+          printf 'event=%s\npr=%s\nhead=%s\n' '${{ github.event_name }}' '${{ github.event.pull_request.number }}' '${{ github.event.pull_request.head.ref }}' > .recovery/pr-target-probe.txt
+          git add .recovery/pr-target-probe.txt
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'Record pull_request_target probe' || true
+          git push origin HEAD:agent/midnight-switchyard-production
