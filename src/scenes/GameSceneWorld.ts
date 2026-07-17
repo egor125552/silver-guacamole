@@ -106,6 +106,8 @@ export function createDrones(scene: any): void {
         const body = object.body as Phaser.Physics.Arcade.Body;
         body.setCollideWorldBounds(true).setMaxVelocity(260, 260);
         const controller = new DroneController(spec);
+        if (scene.testScenario === "overheat")
+            controller.stun(600_000);
         scene.drones.push({ specId: spec.id, object, body, controller });
     }
 }
