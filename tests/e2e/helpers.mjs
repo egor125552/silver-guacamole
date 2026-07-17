@@ -184,6 +184,18 @@ async function openDoor(page, mode, id, point) {
   await expect.poll(async () => (await snapshot(page)).doors[id], { timeout: 3_000 }).toBe(true);
 }
 
+async function coolCarriedCore(page, mode, point) {
+  await navigate(page, mode, point, 42);
+  for (let attempt = 0; attempt < 45; attempt += 1) {
+    const state = await snapshot(page);
+    if (!state.carriedCore) throw new Error(`Core was lost before cooling at ${point.x},${point.y}`);
+    if (state.heat <= 18) return;
+    await page.waitForTimeout(200);
+  }
+  const state = await snapshot(page);
+  throw new Error(`Cooling did not reduce heat at ${point.x},${point.y}; heat=${state.heat.toFixed(1)} mode=${mode}`);
+}
+
 export async function fullRun(page, mode, options = {}) {
   const t = await targets(page);
   const doors = t.doors;
@@ -194,7 +206,7 @@ export async function fullRun(page, mode, options = {}) {
   await useAt(page, mode, t.switches[0]);
   if (options.useBolt !== false) await action(page, mode, "special");
   await useAt(page, mode, t.cores[1]);
-  if (options.useCooling) await navigate(page, mode, t.coolPads[1]);
+  if (options.useCooling) await coolCarriedCore(page, mode, t.coolPads[1]);
   await useAt(page, mode, t.bay);
 
   await openDoor(page, mode, "shaft-cooling", doors["shaft-cooling"]);
@@ -205,7 +217,7 @@ export async function fullRun(page, mode, options = {}) {
   await useAt(page, mode, t.switches[1]);
   if (options.useBolt !== false) await action(page, mode, "special");
   await useAt(page, mode, t.cores[3]);
-  if (options.useCooling) await navigate(page, mode, t.coolPads[4]);
+  if (options.useCooling) await coolCarriedCore(page, mode, t.coolPads[4]);
   await useAt(page, mode, t.bay);
   await expect.poll(async () => (await snapshot(page)).phase, { timeout: 10_000 }).toBe("lockdown");
 
