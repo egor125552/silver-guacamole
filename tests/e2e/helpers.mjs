@@ -90,7 +90,7 @@ async function orient(page, mode, desired) {
 async function forwardStep(page, mode) {
   if (mode === "keyboard") {
     await page.keyboard.down("w");
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(180);
     await page.keyboard.up("w");
   } else if (mode === "voiceover") {
     await page.getByRole("button", { name: "Вперёд", exact: true }).click();
@@ -116,7 +116,8 @@ export async function navigate(page, mode, destination, tolerance = 54) {
     await orient(page, mode, desired);
     await forwardStep(page, mode);
   }
-  throw new Error(`Navigation did not converge to ${destination.x},${destination.y}`);
+  const state = await snapshot(page);
+  throw new Error(`Navigation did not converge to ${destination.x},${destination.y}; player=${state.player.x.toFixed(1)},${state.player.y.toFixed(1)} angle=${state.angle.toFixed(3)} phase=${state.phase}`);
 }
 
 export async function action(page, mode, command = "interact") {
