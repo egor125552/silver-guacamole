@@ -193,6 +193,11 @@ async function crossAndCloseVerticalDoor(page, mode, id, point) {
   await expect.poll(async () => (await snapshot(page)).doors[id], { timeout: 3_000 }).toBe(false);
 }
 
+async function distractBehindClosedGate(page, mode) {
+  await orient(page, mode, Math.PI);
+  await action(page, mode, "special");
+}
+
 async function coolCarriedCore(page, mode, point) {
   await navigate(page, mode, point, 42);
   for (let attempt = 0; attempt < 45; attempt += 1) {
@@ -210,6 +215,7 @@ export async function fullRun(page, mode, options = {}) {
   const doors = t.doors;
   await useAt(page, mode, t.cores[0]);
   await crossAndCloseVerticalDoor(page, mode, "yard-north", doors["yard-north"]);
+  if (options.useBolt !== false) await distractBehindClosedGate(page, mode);
   if (options.useCooling) await coolCarriedCore(page, mode, t.coolPads[1]);
   await useAt(page, mode, t.bay);
 
