@@ -202,6 +202,10 @@ export async function fullRun(page, mode, options = {}) {
   const t = await targets(page);
   const doors = t.doors;
   await useAt(page, mode, t.cores[0]);
+  if (options.useBolt !== false) {
+    await orient(page, mode, Math.PI);
+    await action(page, mode, "special");
+  }
   await openDoor(page, mode, "yard-north", doors["yard-north"]);
   await useAt(page, mode, t.bay);
 
