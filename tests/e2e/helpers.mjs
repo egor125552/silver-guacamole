@@ -178,25 +178,55 @@ async function useAt(page, mode, point, command = "interact") {
   await action(page, mode, command);
 }
 
+const doorHeading = (orientation, direction) => orientation === "vertical"
+  ? (direction > 0 ? 0 : Math.PI)
+  : (direction > 0 ? Math.PI / 2 : -Math.PI / 2);
+
+const doorAxis = (state, orientation) => orientation === "vertical" ? state.player.x : state.player.y;
+const doorCrossAxis = (state, orientation) => orientation === "vertical" ? state.player.y : state.player.x;
+const pointAxis = (point, orientation) => orientation === "vertical" ? point.x : point.y;
+const pointCrossAxis = (point, orientation) => orientation === "vertical" ? point.y : point.x;
+
 async function approachDoor(page, mode, point, orientation) {
+  const initial = await snapshot(page);
+  const direction = doorAxis(initial, orientation) < pointAxis(point, orientation) ? 1 : -1;
+  const staging = orientation === "vertical"
+    ? { x: point.x - direction * 128, y: point.y }
+    : { x: point.x, y: point.y - direction * 128 };
+  await navigate(page, mode, staging, 34);
+  await orient(page, mode, doorHeading(orientation, direction));
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const state = await snapshot(page);
+    if (state.phase === "lost") throw new Error(`Lost while approaching door at ${point.x},${point.y}`);
+    const axial = Math.abs(doorAxis(state, orientation) - pointAxis(point, orientation));
+    const cross = Math.abs(doorCrossAxis(state, orientation) - pointCrossAxis(point, orientation));
+    if (axial <= 50 && cross <= 30) return direction;
+    await forwardStep(page, mode);
+  }
   const state = await snapshot(page);
-  const approach = orientation === "vertical"
-    ? { x: point.x + (state.player.x < point.x ? -56 : 56), y: point.y }
-    : { x: point.x, y: point.y + (state.player.y < point.y ? -56 : 56) };
-  await navigate(page, mode, approach, 18);
+  throw new Error(`Could not reach door interaction range at ${point.x},${point.y}; player=${state.player.x.toFixed(1)},${state.player.y.toFixed(1)}`);
 }
 
 async function openDoor(page, mode, id, point, orientation = "horizontal") {
-  await approachDoor(page, mode, point, orientation);
+  const direction = await approachDoor(page, mode, point, orientation);
   if (!(await snapshot(page)).doors[id]) await action(page, mode, "interact");
   await expect.poll(async () => (await snapshot(page)).doors[id], { timeout: 3_000 }).toBe(true);
+  return direction;
 }
 
 async function crossAndCloseVerticalDoor(page, mode, id, point) {
-  const before = await snapshot(page);
-  const direction = before.player.x < point.x ? 1 : -1;
-  await openDoor(page, mode, id, point, "vertical");
-  await navigate(page, mode, { x: point.x + direction * 56, y: point.y }, 18);
+  const direction = await openDoor(page, mode, id, point, "vertical");
+  await orient(page, mode, doorHeading("vertical", direction));
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const state = await snapshot(page);
+    if (direction * (state.player.x - point.x) >= 8) break;
+    await forwardStep(page, mode);
+  }
+  const crossed = await snapshot(page);
+  const doorDistance = Math.hypot(crossed.player.x - point.x, crossed.player.y - point.y);
+  if (direction * (crossed.player.x - point.x) < 8 || doorDistance >= 68) {
+    throw new Error(`Door crossing did not finish in interaction range; player=${crossed.player.x.toFixed(1)},${crossed.player.y.toFixed(1)} distance=${doorDistance.toFixed(1)}`);
+  }
   await action(page, mode, "interact");
   await expect.poll(async () => (await snapshot(page)).doors[id], { timeout: 3_000 }).toBe(false);
 }
