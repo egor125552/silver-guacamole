@@ -209,11 +209,8 @@ export async function fullRun(page, mode, options = {}) {
   const t = await targets(page);
   const doors = t.doors;
   await useAt(page, mode, t.cores[0]);
-  if (options.useBolt !== false) {
-    await orient(page, mode, Math.PI);
-    await action(page, mode, "special");
-  }
   await crossAndCloseVerticalDoor(page, mode, "yard-north", doors["yard-north"]);
+  if (options.useCooling) await coolCarriedCore(page, mode, t.coolPads[1]);
   await useAt(page, mode, t.bay);
 
   await useAt(page, mode, t.switches[0]);
