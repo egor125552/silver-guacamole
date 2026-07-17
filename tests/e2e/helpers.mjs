@@ -2,6 +2,7 @@ import { expect } from "@playwright/test";
 
 const labels = { keyboard: "Клавиатура", voiceover: "VoiceOver — постоянные HTML-кнопки", gestures: "Жесты без VoiceOver" };
 const normalize = (angle) => Math.atan2(Math.sin(angle), Math.cos(angle));
+let pointerSequence = 90;
 
 export async function startGame(page, mode = "keyboard", extra = "") {
   const errors = [];
@@ -18,36 +19,45 @@ export async function startGame(page, mode = "keyboard", extra = "") {
 export async function snapshot(page) { return page.evaluate(() => window.__SWITCHYARD_TEST__.snapshot()); }
 export async function targets(page) { return page.evaluate(() => window.__SWITCHYARD_TEST__.targets()); }
 
-async function gestureSwipe(page, dx, dy, duration = 80) {
+async function gesturePoint(page) {
   const surface = page.locator("#gesture-surface");
   const box = await surface.boundingBox();
   if (!box) throw new Error("Gesture surface is not visible");
-  const x = box.x + box.width / 2;
-  const y = box.y + box.height / 2;
-  const pointerId = 91;
-  await surface.dispatchEvent("pointerdown", {
+  return { surface, x: box.x + box.width / 2, y: box.y + box.height / 2 };
+}
+
+async function dispatchTouch(surface, type, pointerId, x, y, buttons) {
+  await surface.dispatchEvent(type, {
     pointerId,
     pointerType: "touch",
     isPrimary: true,
     clientX: x,
     clientY: y,
     button: 0,
-    buttons: 1,
+    buttons,
     bubbles: true,
     cancelable: true,
   });
+}
+
+async function gestureSwipe(page, dx, dy, duration = 80) {
+  const { surface, x, y } = await gesturePoint(page);
+  const pointerId = pointerSequence += 1;
+  await dispatchTouch(surface, "pointerdown", pointerId, x, y, 1);
   await page.waitForTimeout(duration);
-  await surface.dispatchEvent("pointerup", {
-    pointerId,
-    pointerType: "touch",
-    isPrimary: true,
-    clientX: x + dx,
-    clientY: y + dy,
-    button: 0,
-    buttons: 0,
-    bubbles: true,
-    cancelable: true,
-  });
+  await dispatchTouch(surface, "pointerup", pointerId, x + dx, y + dy, 0);
+}
+
+async function gestureTaps(page, count, holdMs = 24, gapMs = 58) {
+  const { surface, x, y } = await gesturePoint(page);
+  for (let index = 0; index < count; index += 1) {
+    const pointerId = pointerSequence += 1;
+    await dispatchTouch(surface, "pointerdown", pointerId, x, y, 1);
+    await page.waitForTimeout(holdMs);
+    await dispatchTouch(surface, "pointerup", pointerId, x, y, 0);
+    if (index + 1 < count) await page.waitForTimeout(gapMs);
+  }
+  await page.waitForTimeout(390);
 }
 
 async function turnToward(page, mode, delta) {
@@ -116,17 +126,22 @@ export async function action(page, mode, command = "interact") {
   } else if (mode === "voiceover") {
     const names = { interact: "Действие", special: "Бросить болт", status: "Статус", instruction: "Повторить инструкцию", pause: "Пауза", stop: "Экстренно остановить звук" };
     await page.getByRole("button", { name: names[command], exact: true }).click();
-  } else {
-    const surface = page.locator("#gesture-surface");
-    const box = await surface.boundingBox();
-    if (!box) throw new Error("Gesture surface is not visible");
-    const x = box.x + box.width / 2, y = box.y + box.height / 2;
-    if (command === "interact") { await page.mouse.click(x, y); await page.waitForTimeout(380); }
-    else if (command === "special") { await page.mouse.click(x, y); await page.waitForTimeout(70); await page.mouse.click(x, y); await page.waitForTimeout(380); }
-    else if (command === "pause") { for (let i = 0; i < 3; i += 1) { await page.mouse.click(x, y); await page.waitForTimeout(55); } await page.waitForTimeout(380); }
-    else if (command === "instruction") { for (let i = 0; i < 4; i += 1) { await page.mouse.click(x, y); await page.waitForTimeout(50); } await page.waitForTimeout(380); }
-    else if (command === "status") { await page.mouse.move(x, y); await page.mouse.down(); await page.waitForTimeout(650); await page.mouse.up(); await page.waitForTimeout(80); }
-    else if (command === "stop") { await page.mouse.move(x, y - 60); await page.mouse.down(); await page.waitForTimeout(760); await page.mouse.move(x, y + 90, { steps: 5 }); await page.mouse.up(); await page.waitForTimeout(80); }
+  } else if (command === "interact") {
+    await gestureTaps(page, 1);
+  } else if (command === "special") {
+    await gestureTaps(page, 2);
+  } else if (command === "pause") {
+    await gestureTaps(page, 3);
+  } else if (command === "instruction") {
+    await gestureTaps(page, 4);
+  } else if (command === "status") {
+    const { surface, x, y } = await gesturePoint(page);
+    const pointerId = pointerSequence += 1;
+    await dispatchTouch(surface, "pointerdown", pointerId, x, y, 1);
+    await page.waitForTimeout(660);
+    await dispatchTouch(surface, "pointerup", pointerId, x, y, 0);
+  } else if (command === "stop") {
+    await gestureSwipe(page, 0, 170, 760);
   }
   await page.waitForTimeout(80);
 }
@@ -136,11 +151,17 @@ async function useAt(page, mode, point, command = "interact") {
   await action(page, mode, command);
 }
 
+async function openDoor(page, mode, id, point) {
+  await navigate(page, mode, point);
+  if (!(await snapshot(page)).doors[id]) await action(page, mode, "interact");
+  await expect.poll(async () => (await snapshot(page)).doors[id], { timeout: 3_000 }).toBe(true);
+}
+
 export async function fullRun(page, mode, options = {}) {
   const t = await targets(page);
   const doors = t.doors;
   await useAt(page, mode, t.cores[0]);
-  await useAt(page, mode, doors["yard-north"]);
+  await openDoor(page, mode, "yard-north", doors["yard-north"]);
   await useAt(page, mode, t.bay);
 
   await useAt(page, mode, t.switches[0]);
@@ -149,11 +170,11 @@ export async function fullRun(page, mode, options = {}) {
   if (options.useCooling) await navigate(page, mode, t.coolPads[2]);
   await useAt(page, mode, t.bay);
 
-  await useAt(page, mode, doors["shaft-cooling"]);
+  await openDoor(page, mode, "shaft-cooling", doors["shaft-cooling"]);
   await useAt(page, mode, t.cores[2]);
   await useAt(page, mode, t.bay);
 
-  await useAt(page, mode, doors["corridor-gate"]);
+  await openDoor(page, mode, "corridor-gate", doors["corridor-gate"]);
   await useAt(page, mode, t.switches[1]);
   if (options.useBolt !== false) await action(page, mode, "special");
   await useAt(page, mode, t.cores[3]);
