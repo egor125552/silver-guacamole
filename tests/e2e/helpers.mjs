@@ -54,34 +54,30 @@ async function turnToward(page, mode, delta) {
   const direction = delta > 0 ? 1 : -1;
   if (mode === "keyboard") {
     const key = direction > 0 ? "KeyD" : "KeyA";
-    const duration = Math.max(45, Math.min(800, Math.round(Math.abs(delta) / 0.00195)));
-    await page.keyboard.down(key);
-    await page.waitForTimeout(duration);
-    await page.keyboard.up(key);
+    const duration = Math.max(20, Math.min(650, Math.round(Math.abs(delta) / 0.0026)));
+    await page.keyboard.press(key, { delay: duration });
   } else if (mode === "voiceover") {
     await page.getByRole("button", { name: direction > 0 ? "Повернуть вправо" : "Повернуть влево", exact: true }).click();
   } else {
     await gestureSwipe(page, direction > 0 ? 80 : -80, 0);
   }
-  await page.waitForTimeout(55);
+  await page.waitForTimeout(35);
 }
 
 async function orient(page, mode, desired) {
-  for (let attempt = 0; attempt < 12; attempt += 1) {
+  for (let attempt = 0; attempt < 20; attempt += 1) {
     const state = await snapshot(page);
     const delta = normalize(desired - state.angle);
-    if (Math.abs(delta) < 0.16) return;
+    if (Math.abs(delta) < 0.12) return;
     await turnToward(page, mode, delta);
   }
   const state = await snapshot(page);
-  if (Math.abs(normalize(desired - state.angle)) >= 0.24) throw new Error(`Could not orient ${mode}`);
+  if (Math.abs(normalize(desired - state.angle)) >= 0.2) throw new Error(`Could not orient ${mode}`);
 }
 
 async function forwardStep(page, mode) {
   if (mode === "keyboard") {
-    await page.keyboard.down("KeyW");
-    await page.waitForTimeout(500);
-    await page.keyboard.up("KeyW");
+    await page.keyboard.press("KeyW", { delay: 500 });
   } else if (mode === "voiceover") {
     await page.getByRole("button", { name: "Вперёд", exact: true }).click();
     await page.waitForTimeout(540);
