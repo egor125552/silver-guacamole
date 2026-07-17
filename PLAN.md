@@ -1,6 +1,6 @@
 # Implementation status
 
-Обозначения: `[x]` реализовано и локально проверено; `[~]` ожидает внешней браузерной или опубликованной проверки.
+Обозначения: `[x]` реализовано и проверено; `[~]` ожидает внешней браузерной, физической или опубликованной проверки.
 
 ## Восстановление репозитория
 
@@ -30,14 +30,16 @@
 
 - [x] Клавиатура, HTML-команды VoiceOver и Pointer Events создают общие игровые команды.
 - [x] Переназначение клавиш, keyup, blur, `pointercancel`, pause, restart, status и emergency stop покрыты.
-- [x] 14 unit/contract-тестов проходят локально.
+- [x] 14 unit/contract-тестов проходят.
 - [x] Полные browser playthroughs написаны для трёх adapter-режимов без прямой установки координат или победы.
 - [x] Сценарии потерь от дрона, тележки и перегрева используют реальные правила и restart.
-- [~] Chromium/Firefox/WebKit и mobile WebKit должны подтвердиться в GitHub Actions после публикации production-ветки.
+- [x] Firefox, desktop WebKit и mobile WebKit smoke прошли на production artifact в GitHub Actions.
+- [~] Полные Chromium-сценарии разделены на независимые keyboard, VoiceOver, gestures, persistence и supporting suites и проходят финальную проверку.
 
 ## CI и Pages
 
 - [x] Финальный CI имеет только `contents: read`; он не создаёт commit, не пушит, не слушает issues и не имеет schedule.
+- [x] Устаревшие запуски одной PR отменяются, а тяжёлые Chromium-сценарии выполняются раздельно с отдельными логами и artifacts.
 - [x] Отдельный Pages workflow публикует только после успешного CI на `main`.
 - [x] Production build копирует реальный Aaja WASM в фактически запрашиваемый браузером URL.
-- [~] CI, merge, Pages и живая проверка остаются следующей внешней контрольной точкой.
+- [~] Chromium, merge, Pages и живая проверка остаются финальной внешней контрольной точкой.
