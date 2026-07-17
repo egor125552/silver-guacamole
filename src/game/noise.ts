@@ -34,7 +34,8 @@ export class NoiseSystem {
       const range = Math.min(hearingRadius, event.radius);
       const d = distance(listener, event.position);
       if (d > range) continue;
-      const score = event.strength * (1 - d / Math.max(1, range));
+      const distractionPriority = event.kind === "bolt" ? 2.5 : 1;
+      const score = event.strength * distractionPriority * (1 - d / Math.max(1, range));
       if (score > bestScore) { best = event; bestScore = score; }
     }
     return best;
