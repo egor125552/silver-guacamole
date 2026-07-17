@@ -1,0 +1,72 @@
+name: Build pinned Aaja artifact
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  AAJA_COMMIT: 4ad11f77b15163699d9213bc461d8aefb37c12f7
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: egor125552/rust-Aaja-game-engine-web
+          ref: ${{ env.AAJA_COMMIT }}
+          path: aaja
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: aaja/package-lock.json
+      - name: Configure Rust and wasm-pack
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustup set profile minimal
+          rustup toolchain install stable --no-self-update
+          rustup default stable
+          rustup target add wasm32-unknown-unknown
+          cargo install wasm-pack --locked --version 0.15.0
+      - name: Install exact workspace dependencies
+        working-directory: aaja
+        run: npm ci
+      - name: Test Rust core
+        working-directory: aaja
+        run: npm run test:rust
+      - name: Test TypeScript adapter
+        working-directory: aaja
+        run: npm run test:ts
+      - name: Build exact production package
+        working-directory: aaja
+        run: npm run build
+      - name: Verify emitted WASM
+        working-directory: aaja
+        run: npm run test:wasm
+      - name: Package engine
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p aaja-package
+          cp -R aaja/packages/engine/dist aaja-package/dist
+          cp aaja/packages/engine/package.json aaja-package/package.json
+          printf '%s\n' "$AAJA_COMMIT" > aaja-package/ENGINE_COMMIT
+          test -s aaja-package/dist/wasm/audio_game_core_bg.wasm
+          tar -czf aaja-package.tar.gz aaja-package
+          sha256sum aaja-package.tar.gz > aaja-package.tar.gz.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pinned-aaja-engine-package
+          path: |
+            aaja-package.tar.gz
+            aaja-package.tar.gz.sha256
+          if-no-files-found: error
+          retention-days: 7

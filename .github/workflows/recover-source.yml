@@ -1,0 +1,35 @@
+name: Export production recovery payload
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/midnight-switchyard-production
+          fetch-depth: 1
+      - name: Package verified recovery inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -d .recovery
+          test -d bootstrap
+          tar -czf production-recovery-payload.tar.gz .recovery bootstrap
+          sha256sum production-recovery-payload.tar.gz > production-recovery-payload.tar.gz.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: production-recovery-payload
+          path: |
+            production-recovery-payload.tar.gz
+            production-recovery-payload.tar.gz.sha256
+          if-no-files-found: error
+          retention-days: 7
