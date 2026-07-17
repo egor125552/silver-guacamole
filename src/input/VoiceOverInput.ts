@@ -4,7 +4,7 @@ export class VoiceOverInput {
   constructor(private readonly hub: InputHub) {}
   attach(root: HTMLElement): () => void {
     const testMode = new URLSearchParams(window.location.search).get("testMode") === "1";
-    const duration = (normalMs: number): number => testMode ? Math.round(normalMs / 2) : normalMs;
+    const duration = (normalMs: number): number => testMode ? Math.round(normalMs / 3) : normalMs;
     const onClick = (event: Event) => {
       const button = (event.target as HTMLElement).closest<HTMLButtonElement>("button[data-command]");
       if (!button) return;
