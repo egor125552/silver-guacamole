@@ -109,7 +109,7 @@ export const WORLD: WorldSpec = {
   bay: cellCenter(12, 12),
   exit: cellCenter(29, 2),
   droneSpecs: [
-    { id: "yard-listener", kind: "listener", route: [cellCenter(2, 7), cellCenter(5, 7), cellCenter(5, 17), cellCenter(2, 17)], speed: 78, hearingRadius: 480, sightRadius: 210 },
+    { id: "yard-listener", kind: "listener", route: [cellCenter(5, 17), cellCenter(2, 17), cellCenter(2, 7), cellCenter(5, 7)], speed: 78, hearingRadius: 480, sightRadius: 210 },
     { id: "hangar-sentinel", kind: "sentinel", route: [cellCenter(9, 3), cellCenter(15, 3), cellCenter(15, 14), cellCenter(9, 14)], speed: 88, hearingRadius: 320, sightRadius: 390 },
     { id: "shaft-sentinel", kind: "sentinel", route: [cellCenter(19, 2), cellCenter(29, 2), cellCenter(29, 6), cellCenter(19, 6)], speed: 84, hearingRadius: 330, sightRadius: 420 },
     { id: "cooling-listener", kind: "listener", route: [cellCenter(19, 10), cellCenter(29, 10), cellCenter(29, 14), cellCenter(19, 14)], speed: 80, hearingRadius: 520, sightRadius: 240 },
