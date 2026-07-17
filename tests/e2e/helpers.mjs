@@ -53,9 +53,11 @@ async function gestureSwipe(page, dx, dy, duration = 80) {
 async function turnToward(page, mode, delta) {
   const direction = delta > 0 ? 1 : -1;
   if (mode === "keyboard") {
-    const key = direction > 0 ? "KeyD" : "KeyA";
-    const duration = Math.max(20, Math.min(650, Math.round(Math.abs(delta) / 0.0026)));
-    await page.keyboard.press(key, { delay: duration });
+    const key = direction > 0 ? "d" : "a";
+    const duration = Math.max(24, Math.min(620, Math.round(Math.abs(delta) / 0.0026)));
+    await page.keyboard.down(key);
+    await page.waitForTimeout(duration);
+    await page.keyboard.up(key);
   } else if (mode === "voiceover") {
     await page.getByRole("button", { name: direction > 0 ? "Повернуть вправо" : "Повернуть влево", exact: true }).click();
   } else {
@@ -65,7 +67,7 @@ async function turnToward(page, mode, delta) {
 }
 
 async function orient(page, mode, desired) {
-  for (let attempt = 0; attempt < 20; attempt += 1) {
+  for (let attempt = 0; attempt < 24; attempt += 1) {
     const state = await snapshot(page);
     const delta = normalize(desired - state.angle);
     if (Math.abs(delta) < 0.12) return;
@@ -77,7 +79,9 @@ async function orient(page, mode, desired) {
 
 async function forwardStep(page, mode) {
   if (mode === "keyboard") {
-    await page.keyboard.press("KeyW", { delay: 500 });
+    await page.keyboard.down("w");
+    await page.waitForTimeout(500);
+    await page.keyboard.up("w");
   } else if (mode === "voiceover") {
     await page.getByRole("button", { name: "Вперёд", exact: true }).click();
     await page.waitForTimeout(540);
@@ -107,7 +111,7 @@ export async function navigate(page, mode, destination, tolerance = 54) {
 
 export async function action(page, mode, command = "interact") {
   if (mode === "keyboard") {
-    const keys = { interact: "Space", special: "KeyQ", status: "KeyI", instruction: "KeyH", pause: "Escape", stop: "Shift+Escape" };
+    const keys = { interact: "Space", special: "q", status: "i", instruction: "h", pause: "Escape", stop: "Shift+Escape" };
     await page.keyboard.press(keys[command]);
   } else if (mode === "voiceover") {
     const names = { interact: "Действие", special: "Бросить болт", status: "Статус", instruction: "Повторить инструкцию", pause: "Пауза", stop: "Экстренно остановить звук" };
