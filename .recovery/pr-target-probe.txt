@@ -1,3 +1,0 @@
-event=pull_request_target
-pr=6
-head=agent/midnight-switchyard-production
