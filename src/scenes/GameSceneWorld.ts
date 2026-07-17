@@ -99,9 +99,16 @@ export function createPlayer(scene: any): void {
 }
 
 export function createDrones(scene: any): void {
+    const routeOffsets: Record<string, number> = {
+        "hangar-sentinel": 2,
+        "shaft-sentinel": 2,
+        "cooling-listener": 2,
+        "machine-sentinel": 2,
+    };
     for (const spec of WORLD.droneSpecs) {
-        const route = spec.id === "hangar-sentinel"
-            ? [...spec.route.slice(2), ...spec.route.slice(0, 2)]
+        const offset = routeOffsets[spec.id] ?? 0;
+        const route = offset > 0
+            ? [...spec.route.slice(offset), ...spec.route.slice(0, offset)]
             : spec.route;
         const runtimeSpec = route === spec.route ? spec : { ...spec, route };
         const start = runtimeSpec.route[0] ?? WORLD.start;
