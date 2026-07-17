@@ -64,7 +64,7 @@ async function turnToward(page, mode, delta) {
   const direction = delta > 0 ? 1 : -1;
   if (mode === "keyboard") {
     const key = direction > 0 ? "d" : "a";
-    const duration = Math.max(24, Math.min(620, Math.round(Math.abs(delta) / 0.0026)));
+    const duration = Math.max(24, Math.min(160, Math.round(Math.abs(delta) / 0.0026)));
     await page.keyboard.down(key);
     await page.waitForTimeout(duration);
     await page.keyboard.up(key);
