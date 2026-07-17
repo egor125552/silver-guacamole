@@ -8,6 +8,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 env:
   CI: true
 
@@ -32,9 +36,24 @@ jobs:
           rustup default stable
           rustup target add wasm32-unknown-unknown
           cargo install wasm-pack --locked --version 0.15.0
-      - run: npm run engine:materialize
-      - run: npm ci
-      - run: npm run check
+      - name: Materialize pinned Aaja engine
+        run: npm run engine:materialize
+      - name: Install game dependencies
+        run: npm ci
+      - name: Check formatting
+        run: npm run format:check
+      - name: Lint and typecheck
+        run: npm run lint
+      - name: Run unit and contract tests
+        run: npm run test:unit
+      - name: Build licensed production audio
+        run: npm run audio:build
+      - name: Verify production audio
+        run: npm run audio:verify
+      - name: Verify repository contracts
+        run: npm run repo:verify
+      - name: Build production game
+        run: npm run build
       - name: Verify production artifact
         shell: bash
         run: |

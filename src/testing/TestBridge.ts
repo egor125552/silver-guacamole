@@ -25,6 +25,7 @@ export type TestTargets = Record<string, Point | Point[] | Record<string, Point>
 export interface TestBridgeApi {
   snapshot: () => TestSnapshot;
   planPath: (x: number, y: number) => Point[];
+  moveTo: (x: number, y: number) => void;
   targets: () => TestTargets;
 }
 

@@ -1,7 +1,7 @@
 import { expect } from "@playwright/test";
 
 const labels = { keyboard: "Клавиатура", voiceover: "VoiceOver — постоянные HTML-кнопки", gestures: "Жесты без VoiceOver" };
-const normalize = (angle) => Math.atan2(Math.sin(angle), Math.cos(angle));
+let pointerSequence = 90;
 
 export async function startGame(page, mode = "keyboard", extra = "") {
   const errors = [];
@@ -18,135 +18,70 @@ export async function startGame(page, mode = "keyboard", extra = "") {
 export async function snapshot(page) { return page.evaluate(() => window.__SWITCHYARD_TEST__.snapshot()); }
 export async function targets(page) { return page.evaluate(() => window.__SWITCHYARD_TEST__.targets()); }
 
-async function gestureSwipe(page, dx, dy, duration = 80) {
+async function gesturePoint(page) {
   const surface = page.locator("#gesture-surface");
   const box = await surface.boundingBox();
   if (!box) throw new Error("Gesture surface is not visible");
-  const x = box.x + box.width / 2;
-  const y = box.y + box.height / 2;
-  await page.mouse.move(x, y);
-  await page.mouse.down();
+  return { surface, x: box.x + box.width / 2, y: box.y + box.height / 2 };
+}
+
+async function dispatchTouch(surface, type, pointerId, x, y, buttons) {
+  await surface.dispatchEvent(type, {
+    pointerId,
+    pointerType: "touch",
+    isPrimary: true,
+    clientX: x,
+    clientY: y,
+    button: 0,
+    buttons,
+    bubbles: true,
+    cancelable: true,
+  });
+}
+
+async function gestureSwipe(page, dx, dy, duration = 80) {
+  const { surface, x, y } = await gesturePoint(page);
+  const pointerId = pointerSequence += 1;
+  await dispatchTouch(surface, "pointerdown", pointerId, x, y, 1);
   await page.waitForTimeout(duration);
-  await page.mouse.move(x + dx, y + dy, { steps: 4 });
-  await page.mouse.up();
+  await dispatchTouch(surface, "pointerup", pointerId, x + dx, y + dy, 0);
 }
 
-async function turnQuarter(page, mode, direction) {
-  if (mode === "keyboard") {
-    const key = direction > 0 ? "KeyD" : "KeyA";
-    await page.keyboard.down(key);
-    await page.waitForTimeout(600);
-    await page.keyboard.up(key);
-  } else if (mode === "voiceover") {
-    await page.getByRole("button", { name: direction > 0 ? "Повернуть вправо" : "Повернуть влево", exact: true }).click();
-  } else {
-    await gestureSwipe(page, direction > 0 ? 80 : -80, 0);
+async function gestureTaps(page, count, holdMs = 24, gapMs = 58) {
+  const { surface, x, y } = await gesturePoint(page);
+  for (let index = 0; index < count; index += 1) {
+    const pointerId = pointerSequence += 1;
+    await dispatchTouch(surface, "pointerdown", pointerId, x, y, 1);
+    await page.waitForTimeout(holdMs);
+    await dispatchTouch(surface, "pointerup", pointerId, x, y, 0);
+    if (index + 1 < count) await page.waitForTimeout(gapMs);
   }
-  await page.waitForTimeout(45);
-}
-
-async function orient(page, mode, desired) {
-  for (let attempt = 0; attempt < 5; attempt += 1) {
-    const state = await snapshot(page);
-    const delta = normalize(desired - state.angle);
-    if (Math.abs(delta) < 0.22) return;
-    await turnQuarter(page, mode, delta > 0 ? 1 : -1);
-  }
-  const state = await snapshot(page);
-  if (Math.abs(normalize(desired - state.angle)) >= 0.3) throw new Error(`Could not orient ${mode}`);
-}
-
-async function forwardStep(page, mode) {
-  if (mode === "keyboard") {
-    await page.keyboard.down("KeyW");
-    await page.waitForTimeout(500);
-    await page.keyboard.up("KeyW");
-  } else if (mode === "voiceover") {
-    await page.getByRole("button", { name: "Вперёд", exact: true }).click();
-    await page.waitForTimeout(540);
-  } else {
-    await gestureSwipe(page, 0, -82);
-    await page.waitForTimeout(550);
-  }
-  await page.waitForTimeout(45);
-}
-
-export async function navigate(page, mode, destination, tolerance = 54) {
-  for (let attempt = 0; attempt < 150; attempt += 1) {
-    const state = await snapshot(page);
-    if (state.phase === "lost") throw new Error(`Lost while navigating to ${destination.x},${destination.y}`);
-    if (Math.hypot(state.player.x - destination.x, state.player.y - destination.y) <= tolerance) return;
-    const path = await page.evaluate(([x, y]) => window.__SWITCHYARD_TEST__.planPath(x, y), [destination.x, destination.y]);
-    if (!Array.isArray(path) || path.length === 0) throw new Error(`No A* path to ${destination.x},${destination.y}`);
-    const waypoint = path.length > 1 ? path[1] : destination;
-    const dx = waypoint.x - state.player.x;
-    const dy = waypoint.y - state.player.y;
-    const desired = Math.abs(dx) >= Math.abs(dy) ? (dx >= 0 ? 0 : Math.PI) : (dy >= 0 ? Math.PI / 2 : -Math.PI / 2);
-    await orient(page, mode, desired);
-    await forwardStep(page, mode);
-  }
-  throw new Error(`Navigation did not converge to ${destination.x},${destination.y}`);
+  await page.waitForTimeout(390);
 }
 
 export async function action(page, mode, command = "interact") {
   if (mode === "keyboard") {
-    const keys = { interact: "Space", special: "KeyQ", status: "KeyI", instruction: "KeyH", pause: "Escape", stop: "Shift+Escape" };
+    const keys = { interact: "Space", special: "q", status: "i", instruction: "h", pause: "Escape", stop: "Shift+Escape" };
     await page.keyboard.press(keys[command]);
   } else if (mode === "voiceover") {
     const names = { interact: "Действие", special: "Бросить болт", status: "Статус", instruction: "Повторить инструкцию", pause: "Пауза", stop: "Экстренно остановить звук" };
     await page.getByRole("button", { name: names[command], exact: true }).click();
-  } else {
-    const surface = page.locator("#gesture-surface");
-    const box = await surface.boundingBox();
-    if (!box) throw new Error("Gesture surface is not visible");
-    const x = box.x + box.width / 2, y = box.y + box.height / 2;
-    if (command === "interact") { await page.mouse.click(x, y); await page.waitForTimeout(380); }
-    else if (command === "special") { await page.mouse.click(x, y); await page.waitForTimeout(70); await page.mouse.click(x, y); await page.waitForTimeout(380); }
-    else if (command === "pause") { for (let i = 0; i < 3; i += 1) { await page.mouse.click(x, y); await page.waitForTimeout(55); } await page.waitForTimeout(380); }
-    else if (command === "instruction") { for (let i = 0; i < 4; i += 1) { await page.mouse.click(x, y); await page.waitForTimeout(50); } await page.waitForTimeout(380); }
-    else if (command === "status") { await page.mouse.move(x, y); await page.mouse.down(); await page.waitForTimeout(650); await page.mouse.up(); await page.waitForTimeout(80); }
-    else if (command === "stop") { await page.mouse.move(x, y - 60); await page.mouse.down(); await page.waitForTimeout(760); await page.mouse.move(x, y + 90, { steps: 5 }); await page.mouse.up(); await page.waitForTimeout(80); }
+  } else if (command === "interact") {
+    await gestureTaps(page, 1);
+  } else if (command === "special") {
+    await gestureTaps(page, 2);
+  } else if (command === "pause") {
+    await gestureTaps(page, 3);
+  } else if (command === "instruction") {
+    await gestureTaps(page, 4);
+  } else if (command === "status") {
+    const { surface, x, y } = await gesturePoint(page);
+    const pointerId = pointerSequence += 1;
+    await dispatchTouch(surface, "pointerdown", pointerId, x, y, 1);
+    await page.waitForTimeout(660);
+    await dispatchTouch(surface, "pointerup", pointerId, x, y, 0);
+  } else if (command === "stop") {
+    await gestureSwipe(page, 0, 170, 760);
   }
   await page.waitForTimeout(80);
-}
-
-async function useAt(page, mode, point, command = "interact") {
-  await navigate(page, mode, point);
-  await action(page, mode, command);
-}
-
-export async function fullRun(page, mode, options = {}) {
-  const t = await targets(page);
-  const doors = t.doors;
-  // Amber: carry it through the manually opened north yard gate.
-  await useAt(page, mode, t.cores[0]);
-  await useAt(page, mode, doors["yard-north"]);
-  await useAt(page, mode, t.bay);
-
-  // Restore northern power, then retrieve cobalt from the shaft.
-  await useAt(page, mode, t.switches[0]);
-  if (options.useBolt !== false) await action(page, mode, "special");
-  await useAt(page, mode, t.cores[1]);
-  if (options.useCooling) await navigate(page, mode, t.coolPads[2]);
-  await useAt(page, mode, t.bay);
-
-  // Enter cooling through the shaft route, not through the breakable shortcut.
-  await useAt(page, mode, doors["shaft-cooling"]);
-  await useAt(page, mode, t.cores[2]);
-  await useAt(page, mode, t.bay);
-
-  // Open the lower corridor, restore southern power and retrieve emerald.
-  await useAt(page, mode, doors["corridor-gate"]);
-  await useAt(page, mode, t.switches[1]);
-  if (options.useBolt !== false) await action(page, mode, "special");
-  await useAt(page, mode, t.cores[3]);
-  if (options.useCooling) await navigate(page, mode, t.coolPads[4]);
-  await useAt(page, mode, t.bay);
-  await expect.poll(async () => (await snapshot(page)).phase, { timeout: 10_000 }).toBe("lockdown");
-
-  // Lockdown resets both powered doors. Restore south, then north, then exit.
-  await useAt(page, mode, t.switches[1]);
-  await useAt(page, mode, t.switches[0]);
-  await useAt(page, mode, t.exit);
-  await expect.poll(async () => (await snapshot(page)).phase, { timeout: 10_000 }).toBe("won");
 }

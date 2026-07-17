@@ -94,7 +94,7 @@ export function createPlayer(scene: any): void {
     scene.playerBody.setCollideWorldBounds(true).setDrag(420, 420).setMaxVelocity(520, 520);
     scene.playerController = new PlayerController(scene.player, scene.playerBody, scene.services.input);
     if (scene.testMode)
-        scene.playerController.setTestMultiplier(scene.testScenario === "playthrough" ? 3 : 1);
+        scene.playerController.setTestMultiplier(3);
     scene.cameras.main.startFollow(scene.player, true, 0.13, 0.13);
 }
 
