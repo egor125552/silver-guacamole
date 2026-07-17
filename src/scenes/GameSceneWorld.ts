@@ -100,15 +100,19 @@ export function createPlayer(scene: any): void {
 
 export function createDrones(scene: any): void {
     for (const spec of WORLD.droneSpecs) {
-        const start = spec.route[0] ?? WORLD.start;
-        const object = scene.add.circle(start.x, start.y, spec.kind === "interceptor" ? 20 : 17, droneColours[spec.kind], spec.activateOnLockdown ? 0.18 : 1);
+        const route = spec.id === "hangar-sentinel"
+            ? [...spec.route.slice(2), ...spec.route.slice(0, 2)]
+            : spec.route;
+        const runtimeSpec = route === spec.route ? spec : { ...spec, route };
+        const start = runtimeSpec.route[0] ?? WORLD.start;
+        const object = scene.add.circle(start.x, start.y, runtimeSpec.kind === "interceptor" ? 20 : 17, droneColours[runtimeSpec.kind], runtimeSpec.activateOnLockdown ? 0.18 : 1);
         scene.physics.add.existing(object);
         const body = object.body as Phaser.Physics.Arcade.Body;
         body.setCollideWorldBounds(true).setMaxVelocity(260, 260);
-        const controller = new DroneController(spec);
+        const controller = new DroneController(runtimeSpec);
         if (scene.testScenario === "overheat")
             controller.stun(600_000);
-        scene.drones.push({ specId: spec.id, object, body, controller });
+        scene.drones.push({ specId: runtimeSpec.id, object, body, controller });
     }
 }
 
