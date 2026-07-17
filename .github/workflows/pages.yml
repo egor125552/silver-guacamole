@@ -9,6 +9,7 @@ on:
 
 permissions:
   contents: read
+  statuses: write
   pages: write
   id-token: write
 
@@ -58,3 +59,19 @@ jobs:
       - name: Deploy production artifact
         id: deployment
         uses: actions/deploy-pages@v4
+      - name: Record verified Pages deployment
+        uses: actions/github-script@v7
+        env:
+          DEPLOYED_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
+        with:
+          script: |
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: process.env.DEPLOYED_SHA,
+              state: 'success',
+              context: 'pages/deployed',
+              target_url: process.env.PAGE_URL,
+              description: 'GitHub Pages deployment completed',
+            });
