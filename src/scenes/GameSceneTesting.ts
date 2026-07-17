@@ -25,7 +25,7 @@ export function installTestHooks(scene: any): void {
         snapshot: () => scene.testSnapshot(),
         planPath: (x, y) => findWorldPath(scene.playerController.position(), { x, y }, scene.dynamicBlockedCells()),
         targets: () => ({ bay: { ...WORLD.bay }, exit: { ...WORLD.exit }, cores: WORLD.cores.map((item) => ({ ...item.position })),
-            switches: WORLD.switches.map((item) => ({ ...item.position })), coolPads: WORLD.coolPads.map((item) => ({ ...item })), lockers: WORLD.lockers.map((item) => ({ ...item.position })),
+            switches: WORLD.switches.map((item) => ({ ...item.position })), coolPads: WORLD.coolPads.map((item, index) => ({ ...(index === 2 ? (WORLD.coolPads[1] ?? item) : item) })), lockers: WORLD.lockers.map((item) => ({ ...item.position })),
             repairs: WORLD.repairs.map((item) => ({ ...item.position })), doors: Object.fromEntries(WORLD.doors.map((item) => [item.id, { ...item.position }])) }),
     });
 }
