@@ -1,6 +1,6 @@
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
 import { resolve } from "node:path";
 
 const root = resolve(import.meta.dirname, "..");
@@ -35,22 +35,11 @@ for (const [sourceId, source] of Object.entries(manifest.sources)) {
 
 rmSync(tempDir, { recursive: true, force: true });
 mkdirSync(tempDir, { recursive: true });
-const listPath = resolve(tempDir, "assets.tsv");
-writeFileSync(listPath, manifest.assets.map((asset) => `${asset.id}\t${resolve(root, asset.file)}`).join("\n") + "\n");
-const batchScript = String.raw`set -euo pipefail
-while IFS=$'\t' read -r id file; do
-  ffmpeg -y -v error -i "$file" -ac 1 -ar 48000 -f s16le "$OUT/$id.s16le"
-done < "$LIST"`;
-const result = spawnSync("bash", ["-lc", batchScript], {
-  encoding: "utf8",
-  maxBuffer: 64 * 1024 * 1024,
-  env: { ...process.env, LIST: listPath, OUT: tempDir },
-});
-if (result.status !== 0) throw new Error(`FFmpeg batch decode failed: ${result.stderr || result.stdout}`);
-
 const metadata = new Map();
 for (const asset of manifest.assets) {
   const file = resolve(root, asset.file);
+  const pcmPath = resolve(tempDir, `${asset.id}.s16le`);
+  run("ffmpeg", ["-nostdin", "-y", "-v", "error", "-i", file, "-ac", "1", "-ar", "48000", "-f", "s16le", pcmPath]);
   const probe = JSON.parse(run("ffprobe", [
     "-v", "error",
     "-show_entries", "stream=codec_name,sample_rate,channels:format=duration,size",
