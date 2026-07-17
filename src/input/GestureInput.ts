@@ -12,6 +12,8 @@ export class GestureInput {
   constructor(private readonly hub: InputHub, private readonly diagnostics: GameDiagnostics, private readonly sensitivity: () => number) {}
 
   attach(surface: HTMLElement): () => void {
+    const testMode = new URLSearchParams(window.location.search).get("testMode") === "1";
+    const moveDuration = testMode ? Math.round(520 / 3) : 520;
     const down = (event: PointerEvent) => {
       if (this.pointerId !== null) return;
       this.pointerId = event.pointerId;
@@ -38,7 +40,7 @@ export class GestureInput {
       } else if (Math.abs(dx) > Math.abs(dy)) {
         this.hub.emit({ type: "turn", amount: dx > 0 ? Math.PI / 2 : -Math.PI / 2 });
       } else {
-        this.hub.emit({ type: "move", amount: dy < 0 ? 1 : -0.6, durationMs: 520 });
+        this.hub.emit({ type: "move", amount: dy < 0 ? 1 : -0.6, durationMs: moveDuration });
       }
       event.preventDefault();
     };
