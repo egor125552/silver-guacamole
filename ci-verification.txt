@@ -1,1 +1,0 @@
-One-time pull-request CI verification for the published Midnight Switchyard source tree.
