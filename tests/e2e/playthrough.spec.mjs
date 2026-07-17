@@ -20,7 +20,7 @@ for (const mode of ["keyboard", "voiceover", "gestures"]) {
 test("win persists, reloads, replays and full reset clears versioned save", async ({ page, browserName }) => {
   test.skip(browserName !== "chromium");
   await startGame(page, "keyboard");
-  await fullRun(page, "keyboard", { useBolt: false, useCooling: true });
+  await fullRun(page, "keyboard", { useBolt: true, useCooling: true });
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem("midnight-switchyard-save-v2")));
   expect(saved.version).toBe(2);
   expect(saved.completedRuns).toBe(1);
