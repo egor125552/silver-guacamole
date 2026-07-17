@@ -32,9 +32,12 @@ test("four real deliveries start lockdown and require both switches", () => {
   assert.ok(score >= 100); assert.equal(rules.phase, "won");
 });
 
-test("overheated core is dropped through the normal rules path", () => {
+test("accessible carry window lasts about a minute before overheat", () => {
   const rules = new GameRules(); rules.start(); rules.pickCore("amber");
-  rules.update(26_000, false, { x: 200, y: 300 });
+  rules.update(55_000, false, { x: 200, y: 300 });
+  assert.equal(rules.carriedCore, "amber");
+  assert.equal(rules.health, 3);
+  rules.update(6_000, false, { x: 200, y: 300 });
   assert.equal(rules.carriedCore, null);
   assert.equal(rules.health, 2);
   assert.ok(rules.events.some((event) => event.type === "core-dropped"));
