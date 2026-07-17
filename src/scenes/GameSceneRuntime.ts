@@ -50,7 +50,7 @@ export function updateDrones(scene: any, delta: number, playerPoint: Point): voi
             scene.services.announcements.announce("Дрон сближается. Слышен предупредительный импульс.", "danger");
         if (distance(position, playerPoint) < 38 && drone.controller.state !== "stunned" && drone.controller.state !== "dormant") {
             scene.rules.damage(1, `${drone.controller.spec.kind === "listener" ? "поисковый" : "охранный"} дрон`);
-            drone.controller.stun(900);
+            drone.controller.stun(3000);
             void scene.services.audio.oneShot("impact", playerPoint, { category: "danger", priority: 96, volume: 0.95 });
         }
     }
