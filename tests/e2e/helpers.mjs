@@ -186,6 +186,13 @@ async function openDoor(page, mode, id, point) {
   await expect.poll(async () => (await snapshot(page)).doors[id], { timeout: 3_000 }).toBe(true);
 }
 
+async function crossAndCloseVerticalDoor(page, mode, id, point) {
+  await openDoor(page, mode, id, point);
+  await navigate(page, mode, { x: point.x + 64, y: point.y }, 18);
+  await action(page, mode, "interact");
+  await expect.poll(async () => (await snapshot(page)).doors[id], { timeout: 3_000 }).toBe(false);
+}
+
 async function coolCarriedCore(page, mode, point) {
   await navigate(page, mode, point, 42);
   for (let attempt = 0; attempt < 45; attempt += 1) {
@@ -206,7 +213,7 @@ export async function fullRun(page, mode, options = {}) {
     await orient(page, mode, Math.PI);
     await action(page, mode, "special");
   }
-  await openDoor(page, mode, "yard-north", doors["yard-north"]);
+  await crossAndCloseVerticalDoor(page, mode, "yard-north", doors["yard-north"]);
   await useAt(page, mode, t.bay);
 
   await useAt(page, mode, t.switches[0]);
