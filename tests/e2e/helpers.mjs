@@ -24,36 +24,57 @@ async function gestureSwipe(page, dx, dy, duration = 80) {
   if (!box) throw new Error("Gesture surface is not visible");
   const x = box.x + box.width / 2;
   const y = box.y + box.height / 2;
-  await page.mouse.move(x, y);
-  await page.mouse.down();
+  const pointerId = 91;
+  await surface.dispatchEvent("pointerdown", {
+    pointerId,
+    pointerType: "touch",
+    isPrimary: true,
+    clientX: x,
+    clientY: y,
+    button: 0,
+    buttons: 1,
+    bubbles: true,
+    cancelable: true,
+  });
   await page.waitForTimeout(duration);
-  await page.mouse.move(x + dx, y + dy, { steps: 4 });
-  await page.mouse.up();
+  await surface.dispatchEvent("pointerup", {
+    pointerId,
+    pointerType: "touch",
+    isPrimary: true,
+    clientX: x + dx,
+    clientY: y + dy,
+    button: 0,
+    buttons: 0,
+    bubbles: true,
+    cancelable: true,
+  });
 }
 
-async function turnQuarter(page, mode, direction) {
+async function turnToward(page, mode, delta) {
+  const direction = delta > 0 ? 1 : -1;
   if (mode === "keyboard") {
     const key = direction > 0 ? "KeyD" : "KeyA";
+    const duration = Math.max(45, Math.min(800, Math.round(Math.abs(delta) / 0.00195)));
     await page.keyboard.down(key);
-    await page.waitForTimeout(600);
+    await page.waitForTimeout(duration);
     await page.keyboard.up(key);
   } else if (mode === "voiceover") {
     await page.getByRole("button", { name: direction > 0 ? "Повернуть вправо" : "Повернуть влево", exact: true }).click();
   } else {
     await gestureSwipe(page, direction > 0 ? 80 : -80, 0);
   }
-  await page.waitForTimeout(45);
+  await page.waitForTimeout(55);
 }
 
 async function orient(page, mode, desired) {
-  for (let attempt = 0; attempt < 5; attempt += 1) {
+  for (let attempt = 0; attempt < 12; attempt += 1) {
     const state = await snapshot(page);
     const delta = normalize(desired - state.angle);
-    if (Math.abs(delta) < 0.22) return;
-    await turnQuarter(page, mode, delta > 0 ? 1 : -1);
+    if (Math.abs(delta) < 0.16) return;
+    await turnToward(page, mode, delta);
   }
   const state = await snapshot(page);
-  if (Math.abs(normalize(desired - state.angle)) >= 0.3) throw new Error(`Could not orient ${mode}`);
+  if (Math.abs(normalize(desired - state.angle)) >= 0.24) throw new Error(`Could not orient ${mode}`);
 }
 
 async function forwardStep(page, mode) {
@@ -118,24 +139,20 @@ async function useAt(page, mode, point, command = "interact") {
 export async function fullRun(page, mode, options = {}) {
   const t = await targets(page);
   const doors = t.doors;
-  // Amber: carry it through the manually opened north yard gate.
   await useAt(page, mode, t.cores[0]);
   await useAt(page, mode, doors["yard-north"]);
   await useAt(page, mode, t.bay);
 
-  // Restore northern power, then retrieve cobalt from the shaft.
   await useAt(page, mode, t.switches[0]);
   if (options.useBolt !== false) await action(page, mode, "special");
   await useAt(page, mode, t.cores[1]);
   if (options.useCooling) await navigate(page, mode, t.coolPads[2]);
   await useAt(page, mode, t.bay);
 
-  // Enter cooling through the shaft route, not through the breakable shortcut.
   await useAt(page, mode, doors["shaft-cooling"]);
   await useAt(page, mode, t.cores[2]);
   await useAt(page, mode, t.bay);
 
-  // Open the lower corridor, restore southern power and retrieve emerald.
   await useAt(page, mode, doors["corridor-gate"]);
   await useAt(page, mode, t.switches[1]);
   if (options.useBolt !== false) await action(page, mode, "special");
@@ -144,7 +161,6 @@ export async function fullRun(page, mode, options = {}) {
   await useAt(page, mode, t.bay);
   await expect.poll(async () => (await snapshot(page)).phase, { timeout: 10_000 }).toBe("lockdown");
 
-  // Lockdown resets both powered doors. Restore south, then north, then exit.
   await useAt(page, mode, t.switches[1]);
   await useAt(page, mode, t.switches[0]);
   await useAt(page, mode, t.exit);
