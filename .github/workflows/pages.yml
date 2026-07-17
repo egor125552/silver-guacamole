@@ -9,7 +9,7 @@ on:
 
 permissions:
   contents: read
-  issues: write
+  statuses: write
   pages: write
   id-token: write
 
@@ -66,14 +66,12 @@ jobs:
           PAGE_URL: ${{ steps.deployment.outputs.page_url }}
         with:
           script: |
-            await github.rest.issues.createComment({
+            await github.rest.repos.createCommitStatus({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: 4,
-              body: [
-                'PAGES_DEPLOYMENT_PROOF',
-                `commit: ${process.env.DEPLOYED_SHA}`,
-                `url: ${process.env.PAGE_URL}`,
-                `run: ${context.runId}`,
-              ].join('\n'),
+              sha: process.env.DEPLOYED_SHA,
+              state: 'success',
+              context: 'pages/deployed',
+              target_url: process.env.PAGE_URL,
+              description: 'GitHub Pages deployment completed',
             });
