@@ -19,11 +19,26 @@ import type { AppUI } from "../ui/AppUI";
 import { DoorSystem } from "../world/DoorSystem";
 import { WORLD, cellKey, distance, doorRect, lineIntersectsRect, worldToCell, zoneAt } from "../world/WorldMap";
 
+function testPath(scene: any, x: number, y: number): Point[] {
+    const position = scene.playerController.position();
+    const path = findWorldPath(position, { x, y }, scene.dynamicBlockedCells());
+    const next = path[1];
+    if (!next)
+        return path;
+    const dx = next.x - position.x;
+    const dy = next.y - position.y;
+    if (Math.abs(dx) >= Math.abs(dy) && Math.abs(dy) > 12)
+        return [position, { x: position.x, y: next.y }, ...path.slice(1)];
+    if (Math.abs(dy) > Math.abs(dx) && Math.abs(dx) > 12)
+        return [position, { x: next.x, y: position.y }, ...path.slice(1)];
+    return path;
+}
+
 export function installTestHooks(scene: any): void {
     scene.detachTestBridge?.();
     scene.detachTestBridge = installTestBridge(scene.testMode, {
         snapshot: () => scene.testSnapshot(),
-        planPath: (x, y) => findWorldPath(scene.playerController.position(), { x, y }, scene.dynamicBlockedCells()),
+        planPath: (x, y) => testPath(scene, x, y),
         targets: () => ({ bay: { ...WORLD.bay }, exit: { ...WORLD.exit }, cores: WORLD.cores.map((item) => ({ ...item.position })),
             switches: WORLD.switches.map((item) => ({ ...item.position })), coolPads: WORLD.coolPads.map((item, index) => ({ ...(index === 2 ? (WORLD.coolPads[1] ?? item) : item) })), lockers: WORLD.lockers.map((item) => ({ ...item.position })),
             repairs: WORLD.repairs.map((item) => ({ ...item.position })), doors: Object.fromEntries(WORLD.doors.map((item) => [item.id, { ...item.position }])) }),
