@@ -15,8 +15,14 @@ jobs:
         include:
           - name: keyboard
             args: tests/e2e/playthrough.spec.mjs --grep complete.*keyboard
+          - name: voiceover
+            args: tests/e2e/playthrough.spec.mjs --grep complete.*voiceover
+          - name: gestures
+            args: tests/e2e/playthrough.spec.mjs --grep complete.*gestures
           - name: persistence
             args: tests/e2e/playthrough.spec.mjs --grep win.*persists
+          - name: overheat
+            args: tests/e2e/hazards.spec.mjs --grep overheating
     name: chromium-${{ matrix.name }}
     runs-on: ubuntu-latest
     timeout-minutes: 18
@@ -31,24 +37,23 @@ jobs:
         with:
           name: production-dist
           path: dist
-          run-id: 29594560993
+          run-id: 29596352930
           github-token: ${{ secrets.GITHUB_TOKEN }}
       - run: npx playwright install --with-deps chromium
-      - name: Run isolated suite with complete log
+      - name: Run isolated suite with concise log
         shell: bash
+        env:
+          PW_LOCAL_SYSTEM_BROWSER: "1"
         run: |
           set +e
-          npx playwright test ${{ matrix.args }} --project=chromium --retries=0 > chromium-${{ matrix.name }}.log 2>&1
+          npx playwright test ${{ matrix.args }} --project=chromium --retries=0 --reporter=line --trace=off > chromium-${{ matrix.name }}.log 2>&1
           code=$?
-          cat chromium-${{ matrix.name }}.log
+          tail -n 240 chromium-${{ matrix.name }}.log
           exit "$code"
-      - name: Upload diagnostic output
+      - name: Upload diagnostic log
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: chromium-${{ matrix.name }}-diagnostics
-          path: |
-            chromium-${{ matrix.name }}.log
-            playwright-report
-            test-results
+          name: chromium-${{ matrix.name }}-log
+          path: chromium-${{ matrix.name }}.log
           retention-days: 3
