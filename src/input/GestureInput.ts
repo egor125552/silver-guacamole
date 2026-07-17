@@ -18,7 +18,7 @@ export class GestureInput {
       this.startX = event.clientX;
       this.startY = event.clientY;
       this.startTime = performance.now();
-      surface.setPointerCapture(event.pointerId);
+      if (event.isTrusted) surface.setPointerCapture(event.pointerId);
       this.diagnostics.setHeld("gesture", true);
       event.preventDefault();
     };
