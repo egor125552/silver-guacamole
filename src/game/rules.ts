@@ -1,5 +1,9 @@
 import type { CoreId, GamePhase, Point, SwitchId } from "./types";
 
+const CORE_HEAT_PER_MS = 0.00155;
+const CORE_COOL_PER_MS = 0.0125;
+const UNATTENDED_CORE_COOL_PER_MS = 0.0065;
+
 export interface RulesSnapshot {
   phase: GamePhase;
   health: number;
@@ -89,7 +93,7 @@ export class GameRules {
     this.elapsedMs += deltaMs;
     this.damageCooldownMs = Math.max(0, this.damageCooldownMs - deltaMs);
     if (this.carriedCore) {
-      const heatDelta = onCoolingPad ? -0.0125 : 0.00365;
+      const heatDelta = onCoolingPad ? -CORE_COOL_PER_MS : CORE_HEAT_PER_MS;
       this.coreHeat = Math.max(0, Math.min(100, this.coreHeat + deltaMs * heatDelta));
       if (this.coreHeat >= 100) {
         const core = this.carriedCore;
@@ -102,7 +106,7 @@ export class GameRules {
         this.damage(1, "выброс перегретого ядра");
       }
     } else {
-      this.coreHeat = Math.max(0, this.coreHeat - deltaMs * 0.0065);
+      this.coreHeat = Math.max(0, this.coreHeat - deltaMs * UNATTENDED_CORE_COOL_PER_MS);
     }
     if (this.phase === "lockdown") {
       this.lockdownRemainingMs = Math.max(0, this.lockdownRemainingMs - deltaMs);
