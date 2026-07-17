@@ -48,7 +48,13 @@ export class DroneController {
       return { velocity: { x: 0, y: 0 }, state: this.state, warning: false, stateChanged: previous !== this.state };
     }
 
-    if (canSeePlayer && distance(position, player) <= this.spec.sightRadius * (lockdown ? 1.15 : 1)) {
+    const boltDistraction = noise?.kind === "bolt";
+    if (boltDistraction) {
+      this.state = "investigate";
+      this.target = { ...noise.position };
+      this.lastKnown = { ...noise.position };
+      this.alertMs = 4200;
+    } else if (canSeePlayer && distance(position, player) <= this.spec.sightRadius * (lockdown ? 1.15 : 1)) {
       this.state = "chase";
       this.target = { ...player };
       this.lastKnown = { ...player };

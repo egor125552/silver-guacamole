@@ -39,6 +39,11 @@ test("Phaser owns the loop and Web Audio is disabled in Phaser", () => {
   assert.match(bootstrap, /noAudio: true/);
 });
 
+test("bolt noise can interrupt an active drone chase", () => {
+  assert.match(read("src/entities/DroneController.ts"), /noise\?\.kind === "bolt"/);
+  assert.match(read("src/entities/DroneController.ts"), /this\.state = "investigate"/);
+  assert.match(read("src/game/noise.ts"), /event\.kind === "bolt" \? 2\.5 : 1/);
+});
 
 test("CI is read-only and E2E does not set coordinates or victory directly", () => {
   for (const workflow of [".github/workflows/ci.yml", ".github/workflows/pages.yml"]) {
@@ -47,5 +52,5 @@ test("CI is read-only and E2E does not set coordinates or victory directly", () 
   }
   const helper = read("tests/e2e/helpers.mjs");
   assert.doesNotMatch(helper, /navigateTo|setPosition\(|phase\s*=\s*["']won/);
-  assert.match(helper, /keyboard\.down|mouse\.down|getByRole\("button"/);
+  assert.match(helper, /keyboard\.press|mouse\.down|getByRole\("button"/);
 });

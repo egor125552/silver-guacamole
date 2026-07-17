@@ -2,18 +2,19 @@ name: Deploy GitHub Pages
 
 on:
   workflow_run:
-    workflows: [Pages Release Gate]
+    workflows: [CI]
     types: [completed]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
-  actions: read
   contents: read
   statuses: write
   pages: write
   id-token: write
 
 env:
+  DEPLOYED_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
   PAGE_URL: https://egor125552.github.io/silver-guacamole/
 
 concurrency:
@@ -21,51 +22,10 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  prepare:
-    runs-on: ubuntu-latest
-    outputs:
-      publish: ${{ steps.release.outputs.publish }}
-      deployed_sha: ${{ steps.release.outputs.sha }}
-    steps:
-      - name: Download release metadata
-        if: ${{ github.event_name == 'workflow_run' }}
-        uses: actions/download-artifact@v4
-        with:
-          name: pages-release-metadata
-          path: .pages-release
-          run-id: ${{ github.event.workflow_run.id }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Resolve release commit
-        id: release
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            sha="${{ github.sha }}"
-          else
-            sha="$(tr -d '\r\n' < .pages-release/pages-release-sha.txt)"
-          fi
-          if [ "$sha" = "SKIP" ]; then
-            echo "publish=false" >> "$GITHUB_OUTPUT"
-            echo "sha=" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          case "$sha" in
-            [0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]) ;;
-            *) echo "Invalid release SHA: $sha" >&2; exit 1 ;;
-          esac
-          echo "publish=true" >> "$GITHUB_OUTPUT"
-          echo "sha=$sha" >> "$GITHUB_OUTPUT"
-
   build:
-    needs: prepare
-    if: ${{ needs.prepare.outputs.publish == 'true' }}
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
-    outputs:
-      deployed_sha: ${{ needs.prepare.outputs.deployed_sha }}
-    env:
-      DEPLOYED_SHA: ${{ needs.prepare.outputs.deployed_sha }}
     steps:
       - name: Record deployment start
         uses: actions/github-script@v7
@@ -109,8 +69,6 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
-    env:
-      DEPLOYED_SHA: ${{ needs.build.outputs.deployed_sha }}
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -135,11 +93,9 @@ jobs:
             });
 
   report-failure:
-    needs: [prepare, build, deploy]
-    if: ${{ always() && needs.prepare.outputs.publish == 'true' && (needs.build.result != 'success' || needs.deploy.result != 'success') }}
+    needs: [build, deploy]
+    if: ${{ always() && (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success') && (needs.build.result != 'success' || needs.deploy.result != 'success') }}
     runs-on: ubuntu-latest
-    env:
-      DEPLOYED_SHA: ${{ needs.prepare.outputs.deployed_sha }}
     steps:
       - name: Record failed Pages deployment
         uses: actions/github-script@v7
