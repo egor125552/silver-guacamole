@@ -13,7 +13,7 @@ export class PlayerController {
     private readonly input: InputHub,
   ) {}
 
-  setTestMultiplier(value: number): void { this.testMultiplier = Math.max(1, value); }
+  setTestMultiplier(value: number): void { this.testMultiplier = Math.max(1, Math.min(2, value)); }
   turnBy(amount: number): void { this.object.rotation = wrapAngle(this.object.rotation + amount); }
   stop(): void { this.body.setVelocity(0, 0); }
   position(): Point { return { x: this.object.x, y: this.object.y }; }
