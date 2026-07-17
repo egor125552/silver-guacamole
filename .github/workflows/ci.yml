@@ -73,8 +73,12 @@ jobs:
 
   chromium-playthroughs:
     needs: [quality]
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [keyboard, voiceover, gestures, persistence, supporting]
     runs-on: ubuntu-latest
-    timeout-minutes: 55
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -87,12 +91,31 @@ jobs:
           name: production-dist
           path: dist
       - run: npx playwright install --with-deps chromium
-      - name: Full command-driven playthroughs, losses, restart, save and reset
-        run: npx playwright test --project=chromium
+      - name: Run Chromium suite ${{ matrix.suite }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "${{ matrix.suite }}" in
+            keyboard)
+              npx playwright test tests/e2e/playthrough.spec.mjs --project=chromium --grep "complete input-driven run through keyboard"
+              ;;
+            voiceover)
+              npx playwright test tests/e2e/playthrough.spec.mjs --project=chromium --grep "complete input-driven run through voiceover"
+              ;;
+            gestures)
+              npx playwright test tests/e2e/playthrough.spec.mjs --project=chromium --grep "complete input-driven run through gestures"
+              ;;
+            persistence)
+              npx playwright test tests/e2e/playthrough.spec.mjs --project=chromium --grep "win persists, reloads, replays and full reset clears versioned save"
+              ;;
+            supporting)
+              npx playwright test --project=chromium --grep-invert "complete input-driven run through|win persists, reloads, replays and full reset clears versioned save"
+              ;;
+          esac
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
-          name: playwright-chromium
+          name: playwright-chromium-${{ matrix.suite }}
           path: |
             playwright-report
             test-results
