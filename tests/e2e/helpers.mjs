@@ -215,12 +215,15 @@ export async function fullRun(page, mode, options = {}) {
 
   await useAt(page, mode, t.switches[0]);
   if (options.useBolt !== false) await action(page, mode, "special");
+  await useAt(page, mode, t.repairs[1]);
   await useAt(page, mode, t.cores[1]);
   if (options.useCooling) await coolCarriedCore(page, mode, t.coolPads[1]);
   await useAt(page, mode, t.bay);
 
   await openDoor(page, mode, "shaft-cooling", doors["shaft-cooling"]);
+  await useAt(page, mode, t.lockers[1]);
   await useAt(page, mode, t.cores[2]);
+  if (options.useCooling) await coolCarriedCore(page, mode, t.coolPads[2]);
   await useAt(page, mode, t.bay);
 
   await openDoor(page, mode, "corridor-gate", doors["corridor-gate"]);
