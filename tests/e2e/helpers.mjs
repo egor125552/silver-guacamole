@@ -94,7 +94,7 @@ async function forwardStep(page, mode) {
     await page.keyboard.up("w");
   } else if (mode === "voiceover") {
     await page.getByRole("button", { name: "Вперёд", exact: true }).click();
-    await page.waitForTimeout(540);
+    await page.waitForTimeout(380);
   } else {
     await gestureSwipe(page, 0, -82);
     await page.waitForTimeout(550);
@@ -102,14 +102,40 @@ async function forwardStep(page, mode) {
   await page.waitForTimeout(45);
 }
 
+async function backwardAlignmentStep(page, mode) {
+  if (mode === "keyboard") {
+    await page.keyboard.down("s");
+    await page.waitForTimeout(160);
+    await page.keyboard.up("s");
+  } else if (mode === "voiceover") {
+    await page.getByRole("button", { name: "Назад", exact: true }).click();
+    await page.waitForTimeout(360);
+  } else {
+    await gestureSwipe(page, 0, 82);
+    await page.waitForTimeout(430);
+  }
+  await page.waitForTimeout(45);
+}
+
 export async function navigate(page, mode, destination, tolerance = 54) {
-  for (let attempt = 0; attempt < 150; attempt += 1) {
+  for (let attempt = 0; attempt < 220; attempt += 1) {
     const state = await snapshot(page);
     if (state.phase === "lost") throw new Error(`Lost while navigating to ${destination.x},${destination.y}`);
     if (Math.hypot(state.player.x - destination.x, state.player.y - destination.y) <= tolerance) return;
     const path = await page.evaluate(([x, y]) => window.__SWITCHYARD_TEST__.planPath(x, y), [destination.x, destination.y]);
     if (!Array.isArray(path) || path.length === 0) throw new Error(`No A* path to ${destination.x},${destination.y}`);
     const waypoint = path.length > 1 ? path[1] : destination;
+    const currentCenter = path[0];
+    const horizontalLeg = Math.abs(waypoint.x - currentCenter.x) >= Math.abs(waypoint.y - currentCenter.y);
+    const crossOffset = horizontalLeg ? state.player.y - currentCenter.y : state.player.x - currentCenter.x;
+    if (path.length > 1 && Math.abs(crossOffset) > 16) {
+      const correction = horizontalLeg
+        ? (crossOffset > 0 ? -Math.PI / 2 : Math.PI / 2)
+        : (crossOffset > 0 ? Math.PI : 0);
+      await orient(page, mode, normalize(correction + Math.PI));
+      await backwardAlignmentStep(page, mode);
+      continue;
+    }
     const dx = waypoint.x - state.player.x;
     const dy = waypoint.y - state.player.y;
     const desired = Math.abs(dx) >= Math.abs(dy) ? (dx >= 0 ? 0 : Math.PI) : (dy >= 0 ? Math.PI / 2 : -Math.PI / 2);
