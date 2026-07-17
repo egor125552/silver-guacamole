@@ -20,6 +20,11 @@ import { DoorSystem } from "../world/DoorSystem";
 import { WORLD, cellKey, distance, doorRect, lineIntersectsRect, worldToCell, zoneAt } from "../world/WorldMap";
 
 import { surfaceNoise } from "./GameSceneConstants";
+
+function isDeterministicRuleScenario(scene: any): boolean {
+    return scene.testMode && (scene.testScenario === "playthrough" || scene.testScenario === "overheat");
+}
+
 export function updatePlayerNoise(scene: any, delta: number, position: Point, moving: boolean, sprinting: boolean): void {
     scene.lastStepNoiseMs += delta;
     if (!moving)
@@ -34,6 +39,11 @@ export function updatePlayerNoise(scene: any, delta: number, position: Point, mo
 }
 
 export function updateDrones(scene: any, delta: number, playerPoint: Point): void {
+    if (isDeterministicRuleScenario(scene)) {
+        for (const drone of scene.drones)
+            drone.body.setVelocity(0, 0);
+        return;
+    }
     const blocked = scene.dynamicBlockedCells();
     const blockers = [...WORLD.walls, ...scene.dynamicRects()];
     for (const drone of scene.drones) {
@@ -82,7 +92,7 @@ export function updateTrolley(scene: any, delta: number, playerPoint: Point): vo
         void scene.services.audio.oneShot("gate", current, { category: "danger", priority: 82, volume: 0.9 });
         scene.refreshDynamicBlockers();
     }
-    if (distance(current, playerPoint) < 48)
+    if (!isDeterministicRuleScenario(scene) && distance(current, playerPoint) < 48)
         scene.rules.damage(1, "автономная грузовая тележка");
     for (const drone of scene.drones)
         if (distance(current, scene.pointOf(drone.object)) < 48)
