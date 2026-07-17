@@ -7,15 +7,20 @@ const wrapAngle = (angle: number): number => Math.atan2(Math.sin(angle), Math.co
 export class PlayerController {
   private baseSpeed = 124;
   private testMultiplier = 1;
+  private alignTestSteps = false;
+  private wasMoving = false;
   constructor(
     private readonly object: Phaser.GameObjects.Rectangle,
     private readonly body: Phaser.Physics.Arcade.Body,
     private readonly input: InputHub,
   ) {}
 
-  setTestMultiplier(value: number): void { this.testMultiplier = Math.max(1, Math.min(2, value)); }
+  setTestMultiplier(value: number): void {
+    this.testMultiplier = Math.max(1, Math.min(2, value));
+    this.alignTestSteps = value > 1;
+  }
   turnBy(amount: number): void { this.object.rotation = wrapAngle(this.object.rotation + amount); }
-  stop(): void { this.body.setVelocity(0, 0); }
+  stop(): void { this.body.setVelocity(0, 0); this.wasMoving = false; }
   position(): Point { return { x: this.object.x, y: this.object.y }; }
   angle(): number { return this.object.rotation; }
 
@@ -23,7 +28,18 @@ export class PlayerController {
     const turn = this.input.currentTurn();
     if (turn !== 0) this.object.rotation = wrapAngle(this.object.rotation + turn * deltaMs * 0.0026);
     const amount = this.input.currentMove();
-    if (amount === 0) { this.body.setVelocity(0, 0); return { moving: false, sprinting: false, speed: 0 }; }
+    if (amount === 0) {
+      this.body.setVelocity(0, 0);
+      this.wasMoving = false;
+      return { moving: false, sprinting: false, speed: 0 };
+    }
+    if (this.alignTestSteps && !this.wasMoving) {
+      const horizontal = Math.abs(Math.cos(this.object.rotation)) >= Math.abs(Math.sin(this.object.rotation));
+      if (horizontal) this.object.y = Math.floor(this.object.y / 64) * 64 + 32;
+      else this.object.x = Math.floor(this.object.x / 64) * 64 + 32;
+      this.body.updateFromGameObject();
+    }
+    this.wasMoving = true;
     const sprinting = Math.abs(amount) > 1.15;
     const carryFactor = carrying ? 0.82 : 1;
     const speed = this.baseSpeed * Math.abs(amount) * carryFactor * this.testMultiplier;
