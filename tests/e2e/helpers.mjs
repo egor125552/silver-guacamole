@@ -91,12 +91,12 @@ async function forwardStep(page, mode) {
   if (mode === "keyboard") {
     await page.keyboard.down("Shift");
     await page.keyboard.down("w");
-    await page.waitForTimeout(120);
+    await page.waitForTimeout(108);
     await page.keyboard.up("w");
     await page.keyboard.up("Shift");
   } else if (mode === "voiceover") {
     await page.getByRole("button", { name: "Быстро вперёд", exact: true }).click();
-    await page.waitForTimeout(235);
+    await page.waitForTimeout(145);
   } else {
     await gestureSwipe(page, 0, -82);
     await page.waitForTimeout(215);
@@ -107,14 +107,14 @@ async function forwardStep(page, mode) {
 async function backwardAlignmentStep(page, mode) {
   if (mode === "keyboard") {
     await page.keyboard.down("s");
-    await page.waitForTimeout(145);
+    await page.waitForTimeout(172);
     await page.keyboard.up("s");
   } else if (mode === "voiceover") {
     await page.getByRole("button", { name: "Назад", exact: true }).click();
-    await page.waitForTimeout(205);
+    await page.waitForTimeout(325);
   } else {
     await gestureSwipe(page, 0, 82);
-    await page.waitForTimeout(215);
+    await page.waitForTimeout(325);
   }
   await page.waitForTimeout(25);
 }
@@ -201,10 +201,6 @@ async function coolCarriedCore(page, mode, point) {
 export async function fullRun(page, mode, options = {}) {
   const t = await targets(page);
   const doors = t.doors;
-  if (options.useBolt !== false) {
-    await orient(page, mode, Math.PI);
-    await action(page, mode, "special");
-  }
   await useAt(page, mode, t.cores[0]);
   await openDoor(page, mode, "yard-north", doors["yard-north"]);
   await useAt(page, mode, t.bay);
