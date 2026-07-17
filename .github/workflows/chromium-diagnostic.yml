@@ -1,0 +1,43 @@
+name: Chromium Diagnostic
+
+on:
+  pull_request:
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  suite:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: hazards
+            args: tests/e2e/hazards.spec.mjs
+          - name: keyboard
+            args: tests/e2e/playthrough.spec.mjs --grep complete.*keyboard
+          - name: voiceover
+            args: tests/e2e/playthrough.spec.mjs --grep complete.*voiceover
+          - name: gestures
+            args: tests/e2e/playthrough.spec.mjs --grep complete.*gestures
+          - name: persistence
+            args: tests/e2e/playthrough.spec.mjs --grep win.*persists
+    name: chromium-${{ matrix.name }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - uses: actions/download-artifact@v4
+        with:
+          name: production-dist
+          path: dist
+          run-id: 29594560993
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test ${{ matrix.args }} --project=chromium --retries=0
