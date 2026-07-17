@@ -9,6 +9,7 @@ on:
 
 permissions:
   contents: read
+  issues: write
   pages: write
   id-token: write
 
@@ -58,3 +59,21 @@ jobs:
       - name: Deploy production artifact
         id: deployment
         uses: actions/deploy-pages@v4
+      - name: Record verified Pages deployment
+        uses: actions/github-script@v7
+        env:
+          DEPLOYED_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: 4,
+              body: [
+                'PAGES_DEPLOYMENT_PROOF',
+                `commit: ${process.env.DEPLOYED_SHA}`,
+                `url: ${process.env.PAGE_URL}`,
+                `run: ${context.runId}`,
+              ].join('\n'),
+            });
