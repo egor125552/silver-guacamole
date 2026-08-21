@@ -397,7 +397,7 @@ void SoundEngine::generateSounds() {
 
     if (openalBuffers.find("Shadow_Ambience") == openalBuffers.end()) {
         std::vector<std::int16_t> samples(44100);
-        for (auto& sample : samples) sample = static_cast<std::int16_t>((static_cast<float>(rand()) / RAND_MAX - 0.5f) * 3500.0f);
+        for (auto& sample : samples) sample = static_cast<std::int16_t>((static_cast<float>(rand()) / static_cast<float>(RAND_MAX) - 0.5f) * 3500.0f);
         createBuffer("Shadow_Ambience", samples);
     }
 
@@ -405,7 +405,7 @@ void SoundEngine::generateSounds() {
         std::vector<std::int16_t> samples(44100 / 4);
         for (size_t i = 0; i < samples.size(); ++i) {
             const float t = static_cast<float>(i) / 44100.0f;
-            const float noise = static_cast<float>(rand()) / RAND_MAX * 2.f - 1.f;
+            const float noise = static_cast<float>(rand()) / static_cast<float>(RAND_MAX) * 2.f - 1.f;
             samples[i] = static_cast<std::int16_t>(23000.f * (std::sin(2.f * 3.1415926f * 1200.f * t) + 0.45f * noise) * std::exp(-t * 15.f));
         }
         createBuffer("Taser_Fire", samples);
@@ -564,7 +564,8 @@ void SoundEngine::update(float deltaTime) {
     static bool inCave = false;
     const bool nowInCave = player->position.x > 50.f;
     if (nowInCave != inCave) {
-        setReverbPreset(nowInCave ? EFX_REVERB_PRESET_CAVE : EFX_REVERB_PRESET_GENERIC);
+        if (nowInCave) setReverbPreset(EFX_REVERB_PRESET_CAVE);
+        else setReverbPreset(EFX_REVERB_PRESET_GENERIC);
         inCave = nowInCave;
     }
 
