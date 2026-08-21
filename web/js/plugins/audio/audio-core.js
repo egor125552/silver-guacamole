@@ -4,15 +4,26 @@ class BrowserAudio {
     const Ctx=globalThis.AudioContext||globalThis.webkitAudioContext;
     if(!Ctx) throw new Error("Web Audio API недоступен в этом браузере");
     this.ctx=new Ctx();
+
+    // Every sound ends up here. Nothing is allowed to connect directly to the destination.
+    // This gives the game one predictable processing path:
+    // source -> optional spatial stage -> environmentInput -> dry/reverb -> master -> output.
     this.master=this.ctx.createGain();
     this.master.gain.value=.9;
     this.master.connect(this.ctx.destination);
+
+    this.environmentInput=this.ctx.createGain();
+    this.dryBus=this.ctx.createGain();
+    this.dryBus.gain.value=1;
+    this.environmentInput.connect(this.dryBus);
+    this.dryBus.connect(this.master);
+
     this.buffers=new Map();
-    this.reverbInput=null;
+    this.spatialize=null;
     this.reverbEnabled=true;
   }
   setBuffer(name,buffer){this.buffers.set(name,buffer);}
-  setReverbInput(node){this.reverbInput=node;}
+  setSpatializer(fn){this.spatialize=typeof fn==="function"?fn:null;}
   setListener(position){
     const l=this.ctx.listener,t=this.ctx.currentTime;
     if(l.positionX){
@@ -21,21 +32,31 @@ class BrowserAudio {
       l.upX.setValueAtTime(0,t);l.upY.setValueAtTime(1,t);l.upZ.setValueAtTime(0,t);
     }else{l.setPosition(position.x,0,position.z);l.setOrientation(0,0,-1,0,1,0);}
   }
-  play(name,{position={x:0,z:0},volume=100,relative=false,pitch=null,loop=false,wet=true}={}){
+  play(name,{position={x:0,z:0},volume=100,relative=false,pitch=null,loop=false}={}){
     const buffer=this.buffers.get(name);if(!buffer)return null;
     const src=this.ctx.createBufferSource();src.buffer=buffer;src.loop=loop;
     src.playbackRate.value=pitch??(.97+Math.random()*.06);
-    const gain=this.ctx.createGain();gain.gain.value=Math.max(0,Math.min(1.25,volume/100));src.connect(gain);
+
+    const gain=this.ctx.createGain();
+    gain.gain.value=Math.max(0,Math.min(1.25,volume/100));
+    src.connect(gain);
+
     let tail=gain;
-    if(!relative){
-      const p=this.ctx.createPanner();p.panningModel="HRTF";p.distanceModel="inverse";
-      p.refDistance=name==="EnemyPing"?11:4;p.rolloffFactor=name==="EnemyPing"?.62:1.5;p.maxDistance=name==="EnemyPing"?60:10000;
-      if(p.positionX){p.positionX.value=position.x;p.positionY.value=0;p.positionZ.value=position.z;}else p.setPosition(position.x,0,position.z);
-      gain.connect(p);tail=p;
+    if(this.spatialize){
+      tail=this.spatialize(gain,{name,position,relative})||gain;
     }
-    tail.connect(this.master);
-    if(!relative&&wet&&this.reverbEnabled&&this.reverbInput)tail.connect(this.reverbInput);
-    src.start();return src;
+
+    // One and only one destination for all voices. The reverb plugin taps this bus,
+    // so footsteps, UI-relative cues, weapons, NPCs and sonar share the same room treatment.
+    tail.connect(this.environmentInput);
+    src.start();
+    return src;
+  }
+  close(){
+    try{this.environmentInput.disconnect();}catch{}
+    try{this.dryBus.disconnect();}catch{}
+    try{this.master.disconnect();}catch{}
+    return this.ctx.close();
   }
 }
-export default {id:"audio-core",async install(game){game.audio=new BrowserAudio(game);await game.audio.ctx.resume();return()=>game.audio.ctx.close();}};
+export default {id:"audio-core",async install(game){game.audio=new BrowserAudio(game);await game.audio.ctx.resume();return()=>game.audio.close();}};
