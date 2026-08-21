@@ -81,6 +81,32 @@ TEST(Hardening, ShadowAndCrouchReduceDetection) {
     EXPECT_GE(hiddenEnemy.detectionLevel, 0.f);
 }
 
+TEST(Hardening, OpenNoiseMakesNearbyEnemyInvestigate) {
+    GameSettings settings;
+    Player player(settings);
+    player.setPosition({0.f, 0.f, 0.f});
+
+    std::vector<std::unique_ptr<Enemy>> enemies;
+    enemies.push_back(std::make_unique<Enemy>(sf::Vector3f{8.f, 0.f, 0.f}, NPCType::REGULAR, settings));
+    std::vector<sf::FloatRect> walls;
+
+    StealthSystem::processPlayerNoise(player, enemies, walls, 10.f);
+    EXPECT_EQ(enemies.front()->state, AIState::ALERT);
+}
+
+TEST(Hardening, WallMufflesTheSameNoise) {
+    GameSettings settings;
+    Player player(settings);
+    player.setPosition({0.f, 0.f, 0.f});
+
+    std::vector<std::unique_ptr<Enemy>> enemies;
+    enemies.push_back(std::make_unique<Enemy>(sf::Vector3f{8.f, 0.f, 0.f}, NPCType::REGULAR, settings));
+    std::vector<sf::FloatRect> walls{sf::FloatRect({3.f, -2.f}, {2.f, 4.f})};
+
+    StealthSystem::processPlayerNoise(player, enemies, walls, 10.f);
+    EXPECT_EQ(enemies.front()->state, AIState::PATROLLING);
+}
+
 TEST(Hardening, DodgeCannotBeSpammed) {
     GameSettings settings;
     Player player(settings);
