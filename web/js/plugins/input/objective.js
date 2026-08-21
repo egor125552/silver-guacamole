@@ -1,0 +1,1 @@
+export default{id:"input-objective-repeat",install(game){return game.on("keyDown",({key,code})=>{if(key!=="c"&&code!=="KeyC")return;const text=game.campaignDescribe?.();if(text)game.status(text);const pos=game.campaignObjectivePosition?.();if(pos)game.audio.play("ObjectivePing",{position:{...pos},relative:false,volume:95,pitch:1.08});});}};

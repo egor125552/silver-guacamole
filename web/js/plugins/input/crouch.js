@@ -1,0 +1,1 @@
+export default{id:"input-crouch",install(game){return game.on("keyDown",({key,code})=>{const p=game.state.player;if(game.state.mode!=="playing"||!p?.alive||(key!=="Control"&&!code.startsWith("Control")))return;p.crouching=!p.crouching;if(p.crouching)p.running=false;game.audio.play("MenuConfirm",{relative:true,volume:55,pitch:p.crouching?.8:1.2});});}};

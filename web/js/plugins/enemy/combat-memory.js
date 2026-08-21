@@ -1,0 +1,1 @@
+export default{id:"enemy-combat-memory",install(game){return game.on("update",()=>{const p=game.state.player;for(const e of game.state.enemies){if(!e.alive||e.state!=="combat")continue;if(!p?.alive){e.state="patrolling";continue;}if(!game.hasLOS(e.position,p.position)){e.target={...p.position};e.state="alert";e.stateSince=game.time;e.decisionAt=game.time;}}});}};

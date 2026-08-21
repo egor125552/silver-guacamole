@@ -1,0 +1,40 @@
+name: Browser port
+
+on:
+  pull_request:
+    paths:
+      - 'web/**'
+      - 'sounds/**'
+      - 'config.ini'
+      - '.github/workflows/browser-port.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'web/**'
+      - 'sounds/**'
+      - 'config.ini'
+      - '.github/workflows/browser-port.yml'
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check JavaScript syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r -d '' file; do
+            node --check "$file"
+          done < <(find web/js -type f -name '*.js' -print0)
+      - name: Run gameplay smoke tests
+        run: |
+          node --experimental-default-type=module web/tests/smoke.mjs
+          node --experimental-default-type=module web/tests/campaign-playthrough.mjs
+          node --experimental-default-type=module web/tests/campaign-randomized.mjs
+      - name: Verify original sound set
+        shell: bash
+        run: |
+          set -euo pipefail
+          count=$(find sounds -type f -name '*.ogg' | wc -l | tr -d ' ')
+          test "$count" = "18"
