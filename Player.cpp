@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cmath>
 #include <AL/al.h>
+#include <AL/alc.h>
 
 Player::Player(const GameSettings& settings) {
     reset(settings);
@@ -53,7 +54,9 @@ void Player::update(float deltaTime, const GameSettings& settings, const std::ve
 
 void Player::setPosition(const sf::Vector3f& newPos) {
     position = newPos;
-    alListener3f(AL_POSITION, position.x, position.y, position.z);
+    if (alcGetCurrentContext() != nullptr) {
+        alListener3f(AL_POSITION, position.x, position.y, position.z);
+    }
 }
 
 void Player::switchWeapon(WeaponType newWeapon) {
