@@ -55,12 +55,14 @@ ok(controlEnemies.every(e=>e.weapon!==Weapon.AUTOMATIC&&e.weapon!==Weapon.SNIPER
 tick(73);
 ok(g.state.campaign.stage===3,'control hold advances');
 ok(g.state.player.unlockedWeapons.has(Weapon.TASER),'control unlocks taser');
-ok(g.state.enemies.length===8,'control survivors must be cleared when stage advances');
+ok(g.state.enemies.every(e=>!e.objectiveTag?.startsWith('control-wave')),'control survivors must be cleared when stage advances');
+ok(g.state.enemies.length<=10,'yard stage must start with bounded enemy count');
 
 killObjective();
 ok(g.state.campaign.stage===4,'yard shooter advances');
 ok(g.state.player.unlockedWeapons.has(Weapon.CROWBAR),'yard unlocks crowbar');
 ok(g.state.player.unlockedWeapons.has(Weapon.AUTOMATIC),'yard unlocks automatic before armory captain');
+ok(g.state.enemies.every(e=>!String(e.id).includes('yard')),'yard survivors must be cleared before armory');
 ok(g.state.enemies.length<=11,'armory stage must keep local enemy count bounded');
 
 killObjective();
@@ -75,6 +77,7 @@ tick(91);
 ok(g.state.campaign.stage===6,'generator advances');
 ok(g.state.player.unlockedWeapons.has(Weapon.SNIPER),'generator unlocks sniper before warden');
 ok(g.state.player.unlockedWeapons.size===11,'all 11 weapons unlocked progressively before warden/exit');
+ok(g.state.enemies.every(e=>!e.objectiveTag?.startsWith('generator-wave')),'generator survivors must be cleared before warden');
 ok(g.state.enemies.length<=12,'warden stage must keep enemy count bounded');
 
 killObjective();
