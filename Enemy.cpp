@@ -156,6 +156,7 @@ bool Enemy::hasLineOfSight(const sf::Vector3f& target, const std::vector<sf::Flo
 }
 
 void Enemy::updateCombat(float deltaTime, Player& player, SoundEngine& engine, const GameSettings& settings, const std::vector<sf::FloatRect>& walls, const std::vector<std::unique_ptr<Enemy>>& allEnemies) {
+    (void)allEnemies;
     if (!player.isAlive) {
         state = AIState::PATROLLING;
         return;
@@ -173,14 +174,18 @@ void Enemy::updateCombat(float deltaTime, Player& player, SoundEngine& engine, c
 
     targetPosition = player.position;
 
+    auto playMovementStep = [&]() {
+        if (stepClock.getElapsedTime().asSeconds() > RUN_STEP_INTERVAL) {
+            engine.playSound("footstep", position, 90.f);
+            stepClock.restart();
+        }
+    };
+
     if (behavior == AIBehavior::AGGRESSOR) {
         const float meleeAttackRange = 1.8f;
         if (distanceToPlayer > meleeAttackRange) {
             move(player.position - position, runSpeed, deltaTime, walls);
-            if (stepClock.getElapsedTime().asSeconds() > RUN_STEP_INTERVAL) {
-                engine.playSound("footstep", position, 90.f);
-                stepClock.restart();
-            }
+            playMovementStep();
         } else if (settings.meleeNpcCanAttack && lastAttackClock.getElapsedTime().asSeconds() > 1.2f) {
             lastAttackClock.restart();
             int damage = settings.fistDamage;
@@ -201,29 +206,61 @@ void Enemy::updateCombat(float deltaTime, Player& player, SoundEngine& engine, c
         return;
     }
 
-    if (weapon == WeaponType::TASER) {
-        if (distanceToPlayer <= settings.taserRange && lastAttackClock.getElapsedTime().asSeconds() > settings.taserCooldown) {
-            lastAttackClock.restart();
-            engine.playSound("Taser_Fire", position);
-            player.takeDamage(0, engine, this, true);
-        }
-    } else if (weapon == WeaponType::PISTOL) {
-        if (distanceToPlayer <= 30.0f && lastAttackClock.getElapsedTime().asSeconds() > 1.5f) {
-            lastAttackClock.restart();
-            engine.playSound("pistol", position);
-            if (getInt(1, 100) <= 60) player.takeDamage(settings.pistolDamage, engine, this);
-        }
-    } else if (weapon == WeaponType::AUTOMATIC) {
-        if (distanceToPlayer <= 25.0f && lastAttackClock.getElapsedTime().asSeconds() > 0.35f) {
-            lastAttackClock.restart();
-            engine.playSound("automatic", position);
-            if (getInt(1, 100) <= 45) player.takeDamage(settings.automaticDamage, engine, this);
-        }
-    } else if (weapon == WeaponType::SNIPER) {
-        if (distanceToPlayer <= 65.0f && lastAttackClock.getElapsedTime().asSeconds() > 2.0f) {
-            lastAttackClock.restart();
-            engine.playSound("sniper", position);
-            if (getInt(1, 100) <= 70) player.takeDamage(settings.sniperDamage, engine, this);
+    float attackRange = 30.0f;
+    float minimumComfortRange = 8.0f;
+    float cooldown = 1.5f;
+    int hitChance = 60;
+    int damage = settings.pistolDamage;
+    std::string attackSound = "pistol";
+    bool guaranteedStun = false;
+
+    switch (weapon) {
+        case WeaponType::TASER:
+            attackRange = settings.taserRange;
+            minimumComfortRange = 0.0f;
+            cooldown = settings.taserCooldown;
+            hitChance = 100;
+            damage = 0;
+            attackSound = "Taser_Fire";
+            guaranteedStun = true;
+            break;
+        case WeaponType::AUTOMATIC:
+            attackRange = 25.0f;
+            minimumComfortRange = 7.0f;
+            cooldown = 0.35f;
+            hitChance = 45;
+            damage = settings.automaticDamage;
+            attackSound = "automatic";
+            break;
+        case WeaponType::SNIPER:
+            attackRange = 65.0f;
+            minimumComfortRange = 22.0f;
+            cooldown = 2.0f;
+            hitChance = 70;
+            damage = settings.sniperDamage;
+            attackSound = "sniper";
+            break;
+        case WeaponType::PISTOL:
+        default:
+            break;
+    }
+
+    if (distanceToPlayer > attackRange * 0.92f) {
+        move(player.position - position, runSpeed * 0.78f, deltaTime, walls);
+        playMovementStep();
+        return;
+    }
+
+    if (minimumComfortRange > 0.0f && distanceToPlayer < minimumComfortRange) {
+        move(position - player.position, runSpeed * 0.58f, deltaTime, walls);
+        playMovementStep();
+    }
+
+    if (distanceToPlayer <= attackRange && lastAttackClock.getElapsedTime().asSeconds() > cooldown) {
+        lastAttackClock.restart();
+        engine.playSound(attackSound, position);
+        if (getInt(1, 100) <= hitChance) {
+            player.takeDamage(damage, engine, this, guaranteedStun);
         }
     }
 }
