@@ -22,22 +22,25 @@ export default {
     };
     game.audio.spatialProfile=profile;
 
-    game.audio.setSpatializer((input,{name,position,relative})=>{
+    game.audio.setSpatializer((input,{name,position,relative,spatialMode="hybrid"})=>{
       // Listener-relative sounds still enter the same environment/reverb bus,
       // but stay centered because they have no world-space direction.
       if(relative)return input;
 
       const listener=game.state.player?.position||{x:0,z:0};
+      const sourceY=position.y??game.audio.listenerHeight??1.65;
+      const listenerY=game.audio.listenerHeight??1.65;
       const dx=position.x-listener.x;
+      const dy=sourceY-listenerY;
       const dz=position.z-listener.z;
-      const distance=Math.hypot(dx,dz);
+      const distance=Math.hypot(dx,dy,dz);
       const angle=Math.atan2(dx,-dz); // 0 = front, + = right, - = left
       const absDegrees=Math.abs(angle)*180/Math.PI;
 
       const front=profile.frontStereoDegrees;
       const rear=Math.max(front+1,profile.rearHrtfDegrees);
       const blend=smooth(clamp((absDegrees-front)/(rear-front),0,1));
-      const hrtfMix=profile.frontHrtfFloor+(1-profile.frontHrtfFloor)*blend;
+      const hrtfMix=spatialMode==="hrtf"?1:(spatialMode==="stereo"?0:profile.frontHrtfFloor+(1-profile.frontHrtfFloor)*blend);
       const crossfade=hrtfMix*Math.PI*.5;
       const stereoWeight=Math.cos(crossfade);
       const hrtfWeight=Math.sin(crossfade);
@@ -68,8 +71,8 @@ export default {
       hrtf.rolloffFactor=0;
       hrtf.maxDistance=10000;
       if(hrtf.positionX){
-        hrtf.positionX.value=position.x;hrtf.positionY.value=0;hrtf.positionZ.value=position.z;
-      }else hrtf.setPosition(position.x,0,position.z);
+        hrtf.positionX.value=position.x;hrtf.positionY.value=sourceY;hrtf.positionZ.value=position.z;
+      }else hrtf.setPosition(position.x,sourceY,position.z);
       range.connect(rearFilter);rearFilter.connect(hrtfGain);hrtfGain.connect(hrtf);
 
       const mix=c.createGain();

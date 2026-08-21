@@ -12,8 +12,9 @@ export default {
       const volume=p.crouching?62:(p.running?112:96);
       const pitch=p.running?rand(1.02,1.08):rand(.96,1.04);
       p.footSide*=-1;
-      const position={x:p.position.x+p.footSide*.22,z:p.position.z+.18};
-      game.audio.play("footstep",{position,relative:false,volume,pitch});
+      // Alternate real left/right feet below the listener so HRTF can encode both side and height.
+      const position={x:p.position.x+p.footSide*.22,y:0,z:p.position.z+.18};
+      game.audio.play("footstep",{position,relative:false,volume,pitch,spatialMode:"hrtf"});
       const noise=p.running?25:(p.crouching?3:10);
       game.emit("playerNoise",{position:{...p.position},radius:noise});
       next=game.time+interval;
