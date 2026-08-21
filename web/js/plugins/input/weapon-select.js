@@ -1,0 +1,3 @@
+import {Weapon} from "../../core/constants.js";
+const byCode={Digit1:[Weapon.FIST,.70],Digit2:[Weapon.PISTOL,.80],Digit3:[Weapon.TASER,.90],Digit4:[Weapon.AUTOMATIC,1],Digit5:[Weapon.SNIPER,1.10],Digit6:[Weapon.MACHETE,1.20],Digit7:[Weapon.KNIFE,1.30],Digit8:[Weapon.CROWBAR,1.40],Digit9:[Weapon.BAT,1.50],Digit0:[Weapon.SHANK,1.60]};
+export default{id:"input-weapon-select",install(game){return game.on("keyDown",({key,code})=>{const p=game.state.player;if(game.state.mode!=="playing"||!p?.alive)return;const item=byCode[code]||(key==="b"||code==="KeyB"?[Weapon.BATON,1.70]:null);if(!item)return;p.weapon=item[0];game.audio.play("MenuSelect",{relative:true,volume:75,pitch:item[1]});});}};

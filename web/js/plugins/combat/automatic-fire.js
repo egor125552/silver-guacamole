@@ -1,0 +1,1 @@
+export default{id:"combat-automatic-fire",install(game){return game.on("update",()=>{const p=game.state.player;if(game.state.mode!=="playing"||!p?.alive)return;const w=game.weaponProfile?.(p.weapon);if(w?.automatic&&game.input.has("Space"))game.emit("playerAttack");});}};

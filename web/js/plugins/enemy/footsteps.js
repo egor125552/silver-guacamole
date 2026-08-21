@@ -1,0 +1,1 @@
+export default{id:"enemy-footsteps",install(game){return game.on("enemyMoved",({enemy,running=false,volume=70})=>{const interval=running?.4:.6;if(game.time<enemy.nextStep)return;game.audio.play("footstep",{position:enemy.position,volume});enemy.nextStep=game.time+interval;});}};

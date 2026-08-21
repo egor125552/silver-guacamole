@@ -1,0 +1,1 @@
+export default{id:"input-lifecycle",install(game){return game.on("keyDown",({key,code})=>{if(game.state.mode==="gameover"&&(key==="r"||code==="KeyR")){game.reset();return;}if(key==="Escape")game.stop();});}};

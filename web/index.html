@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Stealth Action Web</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 44rem; margin: 3rem auto; padding: 0 1rem; line-height: 1.5; }
+    button { font: inherit; padding: .75rem 1rem; }
+    #status { margin-top: 1rem; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Stealth Action Web</h1>
+    <p>Аудиоигра. Для запуска нажмите Enter или кнопку ниже.</p>
+    <button id="start" type="button">Начать игру</button>
+    <p id="status" role="status" aria-live="polite">Игра не запущена.</p>
+    <canvas id="debug-map" width="800" height="600" aria-hidden="true"></canvas>
+  </main>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

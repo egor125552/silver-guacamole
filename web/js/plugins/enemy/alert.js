@@ -1,0 +1,2 @@
+import {distance} from "../../core/math.js";
+export default{id:"enemy-alert",install(game){return game.on("update",({dt})=>{if(game.time<game.settings.gracePeriod)return;for(const e of game.state.enemies){if(!e.alive||game.time<e.stunnedUntil||e.state!=="alert")continue;const d=distance(e.position,e.target);if(d>1.5){game.moveEnemy(e,{x:e.target.x-e.position.x,z:e.target.z-e.position.z},e.runSpeed*.92,dt);game.emit("enemyMoved",{enemy:e,running:true,volume:90});}else if(game.time-e.stateSince>1.2){e.state="searching";e.stateSince=game.time;e.decisionAt=game.time;}}});}};
