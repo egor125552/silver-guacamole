@@ -6,6 +6,7 @@ on:
       - 'web/**'
       - 'sounds/**'
       - 'config.ini'
+      - 'Запустить браузерную игру.command'
       - '.github/workflows/browser-port.yml'
   push:
     branches: [main]
@@ -13,6 +14,7 @@ on:
       - 'web/**'
       - 'sounds/**'
       - 'config.ini'
+      - 'Запустить браузерную игру.command'
       - '.github/workflows/browser-port.yml'
 
 jobs:
@@ -38,3 +40,21 @@ jobs:
           set -euo pipefail
           count=$(find sounds -type f -name '*.ogg' | wc -l | tr -d ' ')
           test "$count" = "18"
+      - name: Package complete browser game
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p package/'Stealth Action Web'
+          cp -R web sounds package/'Stealth Action Web'/
+          cp config.ini package/'Stealth Action Web'/
+          cp 'Запустить браузерную игру.command' package/'Stealth Action Web'/'Запустить игру.command'
+          chmod +x package/'Stealth Action Web'/'Запустить игру.command'
+          cd package
+          zip -qr 'Stealth Action Web — 20 минут.zip' 'Stealth Action Web'
+      - name: Upload complete browser game
+        uses: actions/upload-artifact@v4
+        with:
+          name: Stealth-Action-Web
+          path: package/Stealth Action Web — 20 минут.zip
+          if-no-files-found: error
+          retention-days: 14
