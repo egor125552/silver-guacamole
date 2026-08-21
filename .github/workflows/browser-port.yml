@@ -49,8 +49,31 @@ jobs:
           cp config.ini package/'Stealth Action Web'/
           cp 'Запустить браузерную игру.command' package/'Stealth Action Web'/'Запустить игру.command'
           chmod +x package/'Stealth Action Web'/'Запустить игру.command'
-          cd package
-          zip -qr 'Stealth Action Web — 20 минут.zip' 'Stealth Action Web'
+          python3 - <<'PY'
+          from pathlib import Path
+          import stat
+          import zipfile
+
+          package = Path('package')
+          root = package / 'Stealth Action Web'
+          output = package / 'Stealth Action Web — 20 минут.zip'
+          with zipfile.ZipFile(output, 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
+              for path in sorted([root, *root.rglob('*')], key=lambda p: p.as_posix()):
+                  archive.write(path, path.relative_to(package).as_posix())
+
+          expected = 'Stealth Action Web/Запустить игру.command'
+          with zipfile.ZipFile(output) as archive:
+              names = set(archive.namelist())
+              if expected not in names:
+                  raise SystemExit(f'Missing Unicode launcher name: {expected}')
+              mode = archive.getinfo(expected).external_attr >> 16
+              if not (mode & stat.S_IXUSR):
+                  raise SystemExit('Launcher lost executable permission in ZIP')
+              ogg_count = sum(name.endswith('.ogg') for name in names)
+              if ogg_count != 18:
+                  raise SystemExit(f'Expected 18 OGG files in package, got {ogg_count}')
+          print(f'Validated package: {output}')
+          PY
       - name: Upload complete browser game
         uses: actions/upload-artifact@v4
         with:
