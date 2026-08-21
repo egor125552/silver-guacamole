@@ -12,19 +12,26 @@ on:
 jobs:
   macos:
     runs-on: macos-latest
+    env:
+      CMAKE_PREFIX_PATH: /opt/homebrew/opt/openal-soft
+      CPPFLAGS: -I/opt/homebrew/opt/openal-soft/include
+      LDFLAGS: -L/opt/homebrew/opt/openal-soft/lib
+      PKG_CONFIG_PATH: /opt/homebrew/opt/openal-soft/lib/pkgconfig:/opt/homebrew/lib/pkgconfig
     steps:
       - uses: actions/checkout@v4
       - name: Install dependencies
-        run: brew install cmake sfml openal-soft libogg libvorbis fmt pkgconf
+        run: brew install cmake sfml openal-soft libogg libvorbis fmt pkgconf dylibbundler
       - name: Configure
-        run: cmake -S . -B build -DBUILD_TESTING=ON -DCMAKE_BUILD_TYPE=Release
+        run: |
+          rm -rf build
+          cmake -S . -B build -DBUILD_TESTING=ON -DCMAKE_BUILD_TYPE=Release
       - name: Build
         run: cmake --build build -j 2
       - name: Test
         run: ctest --test-dir build --output-on-failure
       - name: Package app
         run: |
-          mkdir -p "package/Stealth Action.app/Contents/MacOS" "package/Stealth Action.app/Contents/Resources"
+          mkdir -p "package/Stealth Action.app/Contents/MacOS" "package/Stealth Action.app/Contents/Resources" "package/Stealth Action.app/Contents/Frameworks"
           cp build/StealthActionGame "package/Stealth Action.app/Contents/MacOS/StealthActionGame.bin"
           cp -R sounds "package/Stealth Action.app/Contents/Resources/sounds"
           cp config.ini "package/Stealth Action.app/Contents/Resources/config.ini"
@@ -40,6 +47,10 @@ jobs:
             <key>CFBundleShortVersionString</key><string>0.1</string>
           </dict></plist>
           PLIST
+          dylibbundler -od -b \
+            -x "package/Stealth Action.app/Contents/MacOS/StealthActionGame.bin" \
+            -d "package/Stealth Action.app/Contents/Frameworks/" \
+            -p "@executable_path/../Frameworks/"
           cat > "package/Stealth Action.app/Contents/MacOS/StealthActionGame" <<'SH'
           #!/bin/sh
           HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -48,6 +59,8 @@ jobs:
           exec "$HERE/StealthActionGame.bin"
           SH
           chmod +x "package/Stealth Action.app/Contents/MacOS/StealthActionGame"
+          codesign --force --deep --sign - "package/Stealth Action.app"
+          otool -L "package/Stealth Action.app/Contents/MacOS/StealthActionGame.bin"
           ditto -c -k --sequesterRsrc --keepParent "package/Stealth Action.app" "Stealth Action macOS.zip"
       - uses: actions/upload-artifact@v4
         with:
