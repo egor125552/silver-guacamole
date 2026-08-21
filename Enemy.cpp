@@ -5,6 +5,7 @@
 #include <cmath>
 #include <sstream>
 #include <algorithm>
+#include <array>
 
 namespace {
 float planarDistance(const sf::Vector3f& a, const sf::Vector3f& b) {
@@ -17,6 +18,56 @@ bool collidesAt(const sf::Vector3f& pos, const std::vector<sf::FloatRect>& walls
         return wall.findIntersection(bounds).has_value();
     });
 }
+
+sf::Vector3f normalizedPlanar(sf::Vector3f value) {
+    const float length = std::hypot(value.x, value.z);
+    if (length <= 0.0001f) return {0.f, 0.f, 0.f};
+    value.x /= length;
+    value.y = 0.f;
+    value.z /= length;
+    return value;
+}
+
+sf::Vector3f rotatePlanar(const sf::Vector3f& direction, float radians) {
+    const float c = std::cos(radians);
+    const float s = std::sin(radians);
+    return {
+        direction.x * c - direction.z * s,
+        0.f,
+        direction.x * s + direction.z * c
+    };
+}
+
+sf::Vector3f separationFromAllies(
+    const Enemy* self,
+    const std::vector<std::unique_ptr<Enemy>>& allEnemies,
+    float radius = 2.8f)
+{
+    sf::Vector3f separation{0.f, 0.f, 0.f};
+    for (const auto& other : allEnemies) {
+        if (!other || other.get() == self || !other->isAlive) continue;
+        const float distance = planarDistance(self->position, other->position);
+        if (distance <= 0.001f || distance >= radius) continue;
+        const float strength = (radius - distance) / radius;
+        separation += normalizedPlanar(self->position - other->position) * strength;
+    }
+    return separation;
+}
+
+float flankSignFor(const Enemy& self, const Player& player, const std::vector<std::unique_ptr<Enemy>>& allEnemies) {
+    const sf::Vector3f toPlayer = normalizedPlanar(player.position - self.position);
+    float balance = 0.f;
+    for (const auto& other : allEnemies) {
+        if (!other || other.get() == &self || !other->isAlive || other->state != AIState::COMBAT) continue;
+        if (planarDistance(self.position, other->position) > 14.f) continue;
+        const sf::Vector3f toOther = other->position - self.position;
+        balance += toPlayer.x * toOther.z - toPlayer.z * toOther.x;
+    }
+
+    if (std::abs(balance) > 0.1f) return balance > 0.f ? -1.f : 1.f;
+    // Stable fallback so a group does not all choose exactly the same side.
+    return std::sin(self.position.x * 0.37f + self.position.z * 0.19f) >= 0.f ? 1.f : -1.f;
+}
 }
 
 Enemy::Enemy(sf::Vector3f startPos, NPCType npcType, const GameSettings& settings) : type(npcType) {
@@ -25,30 +76,33 @@ Enemy::Enemy(sf::Vector3f startPos, NPCType npcType, const GameSettings& setting
 }
 
 void Enemy::move(sf::Vector3f direction, float speed, float deltaTime, const std::vector<sf::FloatRect>& walls) {
-    const float length = std::hypot(direction.x, direction.z);
-    if (length <= 0.0001f) return;
-    direction.x /= length;
-    direction.z /= length;
+    direction = normalizedPlanar(direction);
+    if (std::hypot(direction.x, direction.z) <= 0.0001f) return;
 
-    const sf::Vector3f desired = position + direction * speed * deltaTime;
-    if (!collidesAt(desired, walls)) {
-        position = desired;
-        return;
-    }
+    const float step = speed * deltaTime;
+    const std::array<float, 9> steeringAngles = {
+        0.f,
+        0.42f, -0.42f,
+        0.82f, -0.82f,
+        1.20f, -1.20f,
+        1.57f, -1.57f
+    };
 
-    const sf::Vector3f slideX{desired.x, position.y, position.z};
-    if (!collidesAt(slideX, walls)) {
-        position = slideX;
-        return;
-    }
-
-    const sf::Vector3f slideZ{position.x, position.y, desired.z};
-    if (!collidesAt(slideZ, walls)) {
-        position = slideZ;
+    // Local obstacle avoidance: try the intended direction first, then progressively
+    // wider side routes. This is deliberately lightweight but prevents the old behaviour
+    // where an NPC simply pressed its face into a wall forever.
+    for (float angle : steeringAngles) {
+        const sf::Vector3f candidateDirection = rotatePlanar(direction, angle);
+        const sf::Vector3f candidate = position + candidateDirection * step;
+        if (!collidesAt(candidate, walls)) {
+            position = candidate;
+            return;
+        }
     }
 }
 
 void Enemy::update(float deltaTime, Player& player, SoundEngine& engine, const GameSettings& settings, GameMode gameMode, const std::vector<sf::FloatRect>& walls, const std::vector<std::unique_ptr<Enemy>>& allEnemies) {
+    (void)gameMode;
     if (!isAlive || isStunned) {
         if (isStunned && stunClock.getElapsedTime().asSeconds() > currentStunDuration) {
             isStunned = false;
@@ -64,7 +118,8 @@ void Enemy::update(float deltaTime, Player& player, SoundEngine& engine, const G
             updateAlert(deltaTime, engine, walls);
             break;
         case AIState::SEARCHING: {
-            if (stateTimer.getElapsedTime().asSeconds() > 15.0f) {
+            const float searchTime = stateTimer.getElapsedTime().asSeconds();
+            if (searchTime > 18.0f) {
                 state = AIState::PATROLLING;
                 setNewRandomTarget(settings);
                 decisionClock.restart();
@@ -72,17 +127,33 @@ void Enemy::update(float deltaTime, Player& player, SoundEngine& engine, const G
             }
 
             sf::Vector3f direction = targetPosition - position;
-            float distanceToTarget = std::hypot(direction.x, direction.z);
-            if (distanceToTarget > 1.5f) {
-                move(direction, walkSpeed * 1.25f, deltaTime, walls);
+            const float distanceToTarget = std::hypot(direction.x, direction.z);
+            if (distanceToTarget > 1.2f) {
+                move(direction, walkSpeed * 1.35f, deltaTime, walls);
                 if (stepClock.getElapsedTime().asSeconds() > WALK_STEP_INTERVAL) {
                     engine.playSound("footstep", position, 75.f);
                     stepClock.restart();
                 }
-            } else if (decisionClock.getElapsedTime().asSeconds() > 2.0f) {
-                targetPosition.x = position.x + getFloat(-8.0f, 8.0f);
-                targetPosition.y = 0.f;
-                targetPosition.z = position.z + getFloat(-8.0f, 8.0f);
+            } else if (decisionClock.getElapsedTime().asSeconds() > 1.15f) {
+                // Search an expanding area around the last known position. Candidate points
+                // inside walls are rejected so the search itself cannot get stuck on bad RNG.
+                const float radius = std::min(14.f, 4.f + searchTime * 0.65f);
+                bool found = false;
+                for (int attempt = 0; attempt < 12; ++attempt) {
+                    sf::Vector3f candidate{
+                        position.x + getFloat(-radius, radius),
+                        0.f,
+                        position.z + getFloat(-radius, radius)
+                    };
+                    candidate.x = std::clamp(candidate.x, -settings.worldSize + 1.f, settings.worldSize - 1.f);
+                    candidate.z = std::clamp(candidate.z, -settings.worldSize + 1.f, settings.worldSize - 1.f);
+                    if (!collidesAt(candidate, walls)) {
+                        targetPosition = candidate;
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) setNewRandomTarget(settings);
                 decisionClock.restart();
             }
             break;
@@ -95,14 +166,14 @@ void Enemy::update(float deltaTime, Player& player, SoundEngine& engine, const G
 
 void Enemy::updatePatrolling(float deltaTime, SoundEngine& engine, const std::vector<sf::FloatRect>& walls) {
     if (isWaiting) {
-        if (stateTimer.getElapsedTime().asSeconds() > getFloat(5.0f, 10.0f)) {
+        if (stateTimer.getElapsedTime().asSeconds() > getFloat(2.5f, 5.5f)) {
             isWaiting = false;
             setNewRandomTarget(engine.getSettings());
             decisionClock.restart();
         }
     } else {
         sf::Vector3f direction = targetPosition - position;
-        float distance = std::hypot(direction.x, direction.z);
+        const float distance = std::hypot(direction.x, direction.z);
         if (distance > 1.0f) {
             isMoving = true;
             move(direction, walkSpeed, deltaTime, walls);
@@ -112,26 +183,30 @@ void Enemy::updatePatrolling(float deltaTime, SoundEngine& engine, const std::ve
             }
         } else {
             isMoving = false;
+            isWaiting = true;
+            stateTimer.restart();
         }
     }
-    if (decisionClock.getElapsedTime().asSeconds() > getFloat(15.0f, 20.0f)) {
-        isWaiting = true;
-        isMoving = false;
-        stateTimer.restart();
+
+    // A patrol target can still be awkward because the old maps are random. Re-roll it
+    // periodically rather than letting an NPC spend half a minute fighting one corner.
+    if (decisionClock.getElapsedTime().asSeconds() > 11.0f) {
+        isWaiting = false;
+        setNewRandomTarget(engine.getSettings());
         decisionClock.restart();
     }
 }
 
 void Enemy::updateAlert(float deltaTime, SoundEngine& engine, const std::vector<sf::FloatRect>& walls) {
     sf::Vector3f direction = targetPosition - position;
-    float distanceToTarget = std::hypot(direction.x, direction.z);
-    if (distanceToTarget > 2.0f) {
-        move(direction, runSpeed, deltaTime, walls);
+    const float distanceToTarget = std::hypot(direction.x, direction.z);
+    if (distanceToTarget > 1.5f) {
+        move(direction, runSpeed * 0.92f, deltaTime, walls);
         if (stepClock.getElapsedTime().asSeconds() > RUN_STEP_INTERVAL) {
             engine.playSound("footstep", position, 90.f);
             stepClock.restart();
         }
-    } else if (stateTimer.getElapsedTime().asSeconds() > 4.0f) {
+    } else if (stateTimer.getElapsedTime().asSeconds() > 1.2f) {
         state = AIState::SEARCHING;
         stateTimer.restart();
         decisionClock.restart();
@@ -142,21 +217,20 @@ bool Enemy::hasLineOfSight(const sf::Vector3f& target, const std::vector<sf::Flo
     sf::Vector2f start(position.x, position.z);
     sf::Vector2f end(target.x, target.z);
     sf::Vector2f dir = end - start;
-    float distance = std::hypot(dir.x, dir.y);
+    const float distance = std::hypot(dir.x, dir.y);
     if (distance > 0) dir /= distance;
 
     for (const auto& wall : walls) {
-        sf::Vector2f intersection_point = rayIntersectsRect(start, dir, wall);
-        if (intersection_point.x != -1) {
-            float intersection_dist = std::hypot(intersection_point.x - start.x, intersection_point.y - start.y);
-            if (intersection_dist < distance) return false;
+        const sf::Vector2f intersectionPoint = rayIntersectsRect(start, dir, wall);
+        if (intersectionPoint.x != -1) {
+            const float intersectionDistance = std::hypot(intersectionPoint.x - start.x, intersectionPoint.y - start.y);
+            if (intersectionDistance < distance) return false;
         }
     }
     return true;
 }
 
 void Enemy::updateCombat(float deltaTime, Player& player, SoundEngine& engine, const GameSettings& settings, const std::vector<sf::FloatRect>& walls, const std::vector<std::unique_ptr<Enemy>>& allEnemies) {
-    (void)allEnemies;
     if (!player.isAlive) {
         state = AIState::PATROLLING;
         return;
@@ -165,14 +239,20 @@ void Enemy::updateCombat(float deltaTime, Player& player, SoundEngine& engine, c
     const float distanceToPlayer = planarDistance(position, player.position);
 
     if (!hasLineOfSight(player.position, walls)) {
+        // Do not instantly forget the player behind a corner. Run to the last place where
+        // they were seen, then perform a real search from there.
         targetPosition = player.position;
-        state = AIState::SEARCHING;
+        state = AIState::ALERT;
         stateTimer.restart();
         decisionClock.restart();
         return;
     }
 
     targetPosition = player.position;
+    const sf::Vector3f separation = separationFromAllies(this, allEnemies);
+    const float flankSign = flankSignFor(*this, player, allEnemies);
+    const sf::Vector3f toPlayer = normalizedPlanar(player.position - position);
+    const sf::Vector3f perpendicular{-toPlayer.z * flankSign, 0.f, toPlayer.x * flankSign};
 
     auto playMovementStep = [&]() {
         if (stepClock.getElapsedTime().asSeconds() > RUN_STEP_INTERVAL) {
@@ -184,7 +264,11 @@ void Enemy::updateCombat(float deltaTime, Player& player, SoundEngine& engine, c
     if (behavior == AIBehavior::AGGRESSOR) {
         const float meleeAttackRange = 1.8f;
         if (distanceToPlayer > meleeAttackRange) {
-            move(player.position - position, runSpeed, deltaTime, walls);
+            sf::Vector3f pursuit = toPlayer + separation * 1.35f;
+            // Once several enemies are fighting, melee NPCs fan out instead of forming one
+            // perfectly overlapping line behind the first attacker.
+            if (distanceToPlayer > 3.0f) pursuit += perpendicular * 0.48f;
+            move(pursuit, runSpeed, deltaTime, walls);
             playMovementStep();
         } else if (settings.meleeNpcCanAttack && lastAttackClock.getElapsedTime().asSeconds() > 1.2f) {
             lastAttackClock.restart();
@@ -245,33 +329,44 @@ void Enemy::updateCombat(float deltaTime, Player& player, SoundEngine& engine, c
             break;
     }
 
-    if (distanceToPlayer > attackRange * 0.92f) {
-        move(player.position - position, runSpeed * 0.78f, deltaTime, walls);
+    if (distanceToPlayer > attackRange * 0.90f) {
+        move(toPlayer + separation * 1.1f + perpendicular * 0.18f, runSpeed * 0.80f, deltaTime, walls);
         playMovementStep();
         return;
     }
 
     if (minimumComfortRange > 0.0f && distanceToPlayer < minimumComfortRange) {
-        move(position - player.position, runSpeed * 0.58f, deltaTime, walls);
+        move((position - player.position) + separation * 1.4f + perpendicular * 0.35f, runSpeed * 0.62f, deltaTime, walls);
+        playMovementStep();
+    } else if (weapon != WeaponType::TASER && distanceToPlayer < attackRange * 0.88f) {
+        // Ranged enemies no longer freeze in their ideal band. They strafe and spread out,
+        // which makes their stereo position change and makes a stationary firing solution harder.
+        move(perpendicular + separation * 1.6f, runSpeed * 0.42f, deltaTime, walls);
         playMovementStep();
     }
 
     if (distanceToPlayer <= attackRange && lastAttackClock.getElapsedTime().asSeconds() > cooldown) {
         lastAttackClock.restart();
         engine.playSound(attackSound, position);
-        if (getInt(1, 100) <= hitChance) {
+
+        int adjustedHitChance = hitChance;
+        if (player.isRunning) adjustedHitChance -= 8;
+        if (distanceToPlayer > attackRange * 0.75f) adjustedHitChance -= 6;
+        if (weapon == WeaponType::SNIPER && distanceToPlayer > minimumComfortRange) adjustedHitChance += 5;
+        adjustedHitChance = std::clamp(adjustedHitChance, 20, 100);
+
+        if (getInt(1, 100) <= adjustedHitChance) {
             player.takeDamage(damage, engine, this, guaranteedStun);
         }
     }
 }
 
 void Enemy::investigate(sf::Vector3f pos) {
-    if (state == AIState::PATROLLING || state == AIState::SEARCHING) {
-        state = AIState::ALERT;
-        targetPosition = pos;
-        stateTimer.restart();
-        decisionClock.restart();
-    }
+    if (state == AIState::COMBAT) return;
+    state = AIState::ALERT;
+    targetPosition = pos;
+    stateTimer.restart();
+    decisionClock.restart();
 }
 
 bool Enemy::canRespawn(float respawnTime) const {
