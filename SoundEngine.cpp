@@ -182,15 +182,23 @@ SoundEngine::~SoundEngine() {
 
 void SoundEngine::setReverbPreset(const EFXEAXREVERBPROPERTIES& preset) {
     if (!audioInitialized || !alEffecti || !alEffectf || !alAuxiliaryEffectSloti || reverbEffect == 0 || effectSlot == 0) return;
+
+    // The game is audio-first, so room character should be clearly audible.
+    // Keep the direct signal intact for localization, but make the wet tail richer and longer.
+    const float wetGain = std::clamp(preset.flGain * 1.75f, 0.0f, 1.0f);
+    const float reflectionsGain = std::clamp(preset.flReflectionsGain * 1.55f, 0.0f, 3.16f);
+    const float lateGain = std::clamp(preset.flLateReverbGain * 1.65f, 0.0f, 10.0f);
+    const float decayTime = std::clamp(preset.flDecayTime * 1.25f, 0.1f, 20.0f);
+
     alEffectf(reverbEffect, AL_REVERB_DENSITY, preset.flDensity);
     alEffectf(reverbEffect, AL_REVERB_DIFFUSION, preset.flDiffusion);
-    alEffectf(reverbEffect, AL_REVERB_GAIN, preset.flGain);
+    alEffectf(reverbEffect, AL_REVERB_GAIN, wetGain);
     alEffectf(reverbEffect, AL_REVERB_GAINHF, preset.flGainHF);
-    alEffectf(reverbEffect, AL_REVERB_DECAY_TIME, preset.flDecayTime);
+    alEffectf(reverbEffect, AL_REVERB_DECAY_TIME, decayTime);
     alEffectf(reverbEffect, AL_REVERB_DECAY_HFRATIO, preset.flDecayHFRatio);
-    alEffectf(reverbEffect, AL_REVERB_REFLECTIONS_GAIN, preset.flReflectionsGain);
+    alEffectf(reverbEffect, AL_REVERB_REFLECTIONS_GAIN, reflectionsGain);
     alEffectf(reverbEffect, AL_REVERB_REFLECTIONS_DELAY, preset.flReflectionsDelay);
-    alEffectf(reverbEffect, AL_REVERB_LATE_REVERB_GAIN, preset.flLateReverbGain);
+    alEffectf(reverbEffect, AL_REVERB_LATE_REVERB_GAIN, lateGain);
     alEffectf(reverbEffect, AL_REVERB_LATE_REVERB_DELAY, preset.flLateReverbDelay);
     alEffectf(reverbEffect, AL_REVERB_AIR_ABSORPTION_GAINHF, preset.flAirAbsorptionGainHF);
     alEffectf(reverbEffect, AL_REVERB_ROOM_ROLLOFF_FACTOR, preset.flRoomRolloffFactor);
@@ -384,6 +392,7 @@ void SoundEngine::generateSounds() {
     tone("Dodge", 1050.f, 0.08f, 28.f, 19000.f);
     tone("Stun", 280.f, 0.22f, 8.f, 26000.f);
     tone("sonar_echo", 1200.f, 0.035f, 80.f, 18000.f);
+    tone("EnemyPing", 980.f, 0.065f, 42.f, 26000.f);
 
     if (openalBuffers.find("LowHealth") == openalBuffers.end()) {
         std::vector<std::int16_t> samples(44100);
@@ -433,8 +442,11 @@ void SoundEngine::run() {
             static sf::Clock stepClock;
             const float interval = player->isCrouching ? Player::CROUCH_STEP_INTERVAL : (player->isRunning ? Player::RUN_STEP_INTERVAL : Player::WALK_STEP_INTERVAL);
             if (moving && stepClock.getElapsedTime().asSeconds() > interval) {
-                const float volume = player->isCrouching ? 40.f : (player->isRunning ? 100.f : 80.f);
-                playSound("footstep", {0, 0, 0}, volume, true);
+                // Player footsteps are intentionally dry and listener-relative: they should always be readable
+                // even when the environment and nearby enemies are loud.
+                const float volume = player->isCrouching ? 72.f : (player->isRunning ? 120.f : 108.f);
+                const float pitch = player->isRunning ? getFloat(1.02f, 1.08f) : getFloat(0.96f, 1.04f);
+                playSound("footstep", {0, 0, 0}, volume, true, pitch);
                 const float noise = player->isRunning ? 25.f : (player->isCrouching ? 3.f : 10.f);
                 StealthSystem::processPlayerNoise(*player, enemies, noise);
                 stepClock.restart();
@@ -816,16 +828,27 @@ void SoundEngine::activateDirectionalSonar(int numpadKey) {
 
 void SoundEngine::updateProximitySonar() {
     if (!audioInitialized) return;
+
+    Enemy* closestEnemy = nullptr;
     float closest = std::numeric_limits<float>::max();
     for (const auto& enemy : enemies) {
-        if (enemy->isAlive) closest = std::min(closest, planarDistance(player->position, enemy->position));
+        if (!enemy->isAlive) continue;
+        const float distance = planarDistance(player->position, enemy->position);
+        if (distance < closest) {
+            closest = distance;
+            closestEnemy = enemy.get();
+        }
     }
-    if (closest > 50.f) return;
+    if (!closestEnemy || closest > 50.f) return;
 
     const float factor = 1.f - closest / 50.f;
-    const float delay = std::max(0.12f, 1.5f * (1.f - factor * 0.92f));
+    const float delay = std::max(0.14f, 1.45f * (1.f - factor * 0.91f));
     if (proximitySonarClock.getElapsedTime().asSeconds() > delay) {
-        playSound("sonar", {0,0,0}, 20.f + factor * 70.f, true, 1.f + factor * 1.3f);
+        // The proximity cue comes from the enemy itself. This turns the ping into a stereo locator:
+        // left enemy = left ping, right enemy = right ping, with pitch/rate still conveying distance.
+        const float volume = 72.f + factor * 45.f;
+        const float pitch = 0.92f + factor * 0.72f;
+        playSound("EnemyPing", closestEnemy->position, volume, false, pitch);
         proximitySonarClock.restart();
     }
 }
@@ -913,8 +936,15 @@ void SoundEngine::playSound(const std::string& name, sf::Vector3f position, floa
         alSource3i(source, AL_AUXILIARY_SEND_FILTER, AL_EFFECTSLOT_NULL, 0, AL_FILTER_NULL);
     } else {
         alSource3f(source, AL_POSITION, position.x, position.y, position.z);
-        alSourcef(source, AL_REFERENCE_DISTANCE, 4.f);
-        alSourcef(source, AL_ROLLOFF_FACTOR, 1.5f);
+        if (name == "EnemyPing") {
+            // Keep the enemy locator readable all the way to the 50 m proximity-sonar radius.
+            alSourcef(source, AL_REFERENCE_DISTANCE, 11.f);
+            alSourcef(source, AL_ROLLOFF_FACTOR, 0.62f);
+            alSourcef(source, AL_MAX_DISTANCE, 60.f);
+        } else {
+            alSourcef(source, AL_REFERENCE_DISTANCE, 4.f);
+            alSourcef(source, AL_ROLLOFF_FACTOR, 1.5f);
+        }
         if (effectSlot) alSource3i(source, AL_AUXILIARY_SEND_FILTER, effectSlot, 0, AL_FILTER_NULL);
     }
 
