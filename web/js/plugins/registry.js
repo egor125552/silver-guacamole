@@ -22,6 +22,10 @@ export const plugins=[
   {module:"../plugins/player/death-state.js"},
   {module:"../plugins/enemy/loadouts.js"},
   {module:"../plugins/enemy/population.js"},
+  {module:"../plugins/campaign/state.js"},
+  {module:"../plugins/campaign/weapon-unlocks.js"},
+  {module:"../plugins/campaign/director.js"},
+  {module:"../plugins/campaign/objective-beacon.js"},
   {module:"../plugins/enemy/damage.js"},
   {module:"../plugins/enemy/spotting.js"},
   {module:"../plugins/enemy/vision.js"},
@@ -53,5 +57,6 @@ export const plugins=[
   {module:"../plugins/input/dodge.js"},
   {module:"../plugins/input/sonar.js"},
   {module:"../plugins/input/lifecycle.js"},
+  {module:"../plugins/input/objective.js"},
   {module:"../plugins/visual/debug-map.js"}
 ];

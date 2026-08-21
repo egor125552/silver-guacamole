@@ -11,8 +11,9 @@ async function start() {
   try {
     game = new Game(status);
     await game.start();
+    if (new URLSearchParams(location.search).has("debug")) globalThis.__STEALTH_GAME__=game;
     startButton.hidden = true;
-    status.textContent = "Игра запущена. Стрелки или WASD — движение. E — сонар.";
+    status.textContent = game.campaignDescribe?.() || "Игра запущена. Стрелки или WASD — движение. E — сонар. C — повторить цель.";
   } catch (error) {
     console.error(error);
     status.textContent = `Ошибка запуска: ${error.message}`;
