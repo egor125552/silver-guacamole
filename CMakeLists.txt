@@ -6,9 +6,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 find_package(SFML 3.0 REQUIRED COMPONENTS Graphics Window System)
-find_package(OpenAL REQUIRED)
-find_package(fmt REQUIRED)
 find_package(PkgConfig REQUIRED)
+pkg_check_modules(OPENAL REQUIRED IMPORTED_TARGET openal)
 pkg_check_modules(VORBISFILE REQUIRED IMPORTED_TARGET vorbisfile)
 
 set(GAME_LOGIC_SOURCES
@@ -34,9 +33,8 @@ target_link_libraries(GameLogic
         SFML::Graphics
         SFML::Window
         SFML::System
+        PkgConfig::OPENAL
     PRIVATE
-        OpenAL::OpenAL
-        fmt::fmt
         PkgConfig::VORBISFILE
 )
 
