@@ -1,0 +1,53 @@
+name: Gameplay hardening
+
+on:
+  push:
+    branches:
+      - fix/gameplay-hardening
+  workflow_dispatch:
+
+jobs:
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: brew install cmake sfml openal-soft libogg libvorbis fmt googletest
+      - name: Configure
+        run: cmake -S . -B build -DBUILD_TESTING=ON
+      - name: Build
+        run: cmake --build build --config Release -j 2
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+      - name: Package app
+        run: |
+          mkdir -p "package/Stealth Action.app/Contents/MacOS" "package/Stealth Action.app/Contents/Resources"
+          cp build/StealthActionGame "package/Stealth Action.app/Contents/MacOS/StealthActionGame"
+          cp -R sounds "package/Stealth Action.app/Contents/Resources/sounds"
+          cp config.ini "package/Stealth Action.app/Contents/Resources/config.ini"
+          cat > "package/Stealth Action.app/Contents/Info.plist" <<'PLIST'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>CFBundleExecutable</key><string>StealthActionGame</string>
+            <key>CFBundleIdentifier</key><string>com.egor.stealthaction</string>
+            <key>CFBundleName</key><string>Stealth Action</string>
+            <key>CFBundlePackageType</key><string>APPL</string>
+            <key>CFBundleVersion</key><string>1</string>
+            <key>CFBundleShortVersionString</key><string>0.1</string>
+          </dict></plist>
+          PLIST
+          cat > "package/Stealth Action.app/Contents/MacOS/launch.sh" <<'SH'
+          #!/bin/sh
+          HERE="$(cd "$(dirname "$0")" && pwd)"
+          RES="$HERE/../Resources"
+          cd "$RES"
+          exec "$HERE/StealthActionGame"
+          SH
+          chmod +x "package/Stealth Action.app/Contents/MacOS/launch.sh"
+          /usr/libexec/PlistBuddy -c 'Set :CFBundleExecutable launch.sh' "package/Stealth Action.app/Contents/Info.plist"
+          ditto -c -k --sequesterRsrc --keepParent "package/Stealth Action.app" "Stealth Action macOS.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Stealth-Action-macOS
+          path: Stealth Action macOS.zip
