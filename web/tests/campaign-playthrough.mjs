@@ -55,16 +55,19 @@ ok(controlEnemies.every(e=>e.weapon!==Weapon.AUTOMATIC&&e.weapon!==Weapon.SNIPER
 tick(73);
 ok(g.state.campaign.stage===3,'control hold advances');
 ok(g.state.player.unlockedWeapons.has(Weapon.TASER),'control unlocks taser');
+ok(g.state.enemies.length===8,'control survivors must be cleared when stage advances');
 
 killObjective();
 ok(g.state.campaign.stage===4,'yard shooter advances');
 ok(g.state.player.unlockedWeapons.has(Weapon.CROWBAR),'yard unlocks crowbar');
 ok(g.state.player.unlockedWeapons.has(Weapon.AUTOMATIC),'yard unlocks automatic before armory captain');
+ok(g.state.enemies.length<=11,'armory stage must keep local enemy count bounded');
 
 killObjective();
 ok(g.state.campaign.stage===5,'armory captain advances');
 ok(g.state.player.unlockedWeapons.has(Weapon.BAT),'armory unlocks bat');
 ok(g.state.player.unlockedWeapons.has(Weapon.MACHETE),'armory unlocks machete');
+ok(g.state.enemies.length===8,'armory survivors must be cleared after stage completion');
 
 reach();
 ok(g.state.campaign.holdUntil>g.time,'generator hold begins');
@@ -72,13 +75,16 @@ tick(91);
 ok(g.state.campaign.stage===6,'generator advances');
 ok(g.state.player.unlockedWeapons.has(Weapon.SNIPER),'generator unlocks sniper before warden');
 ok(g.state.player.unlockedWeapons.size===11,'all 11 weapons unlocked progressively before warden/exit');
+ok(g.state.enemies.length<=12,'warden stage must keep enemy count bounded');
 
 killObjective();
 ok(g.state.campaign.stage===7,'warden advances to exit');
+ok(g.state.enemies.length===8,'warden escorts must not follow player into extraction');
 reach();
 ok(!g.state.campaign.completed,'exit stays locked before 20 minutes');
 g.time=1200;g.emit('update',{dt:.1,time:g.time});
 ok(g.state.campaign.completed,'campaign completes at or after 20 minutes');
 ok(g.state.mode==='victory','victory mode');
+ok(g.state.enemies.length===8,'victory must not retain scripted reinforcement crowds');
 
 console.log('Campaign balanced playthrough passed:',{time:g.time,stages:8,weapons:g.state.player.unlockedWeapons.size,enemies:g.state.enemies.length});
