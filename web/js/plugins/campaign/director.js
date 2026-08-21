@@ -12,6 +12,10 @@ const stageUnlocks={
   5:[Weapon.SNIPER],
 };
 
+function cleanupCampaignSpawns(game){
+  game.state.enemies=game.state.enemies.filter(e=>!String(e.id).startsWith("campaign-"));
+}
+
 function spawnNear(game,center,count,{type=NPCType.GUARD,role=null,tag=null,weapon=null,behavior=null,health=null}={}){
   const out=[];
   for(let i=0;i<count;i++){
@@ -59,6 +63,7 @@ export default{
 
     const setStage=index=>{
       const c=game.state.campaign;if(!c)return;
+      cleanupCampaignSpawns(game);
       c.stage=index;c.stageSince=game.time;c.objectiveEnemyId=null;c.holdUntil=0;c.nextWaveAt=0;c.wave=0;
       const s=CampaignStages[index];
       if(!s){
