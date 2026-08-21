@@ -40,6 +40,11 @@ target_link_libraries(GameLogic
         PkgConfig::VORBISFILE
 )
 
+if(APPLE)
+    find_library(APPLICATION_SERVICES_FRAMEWORK ApplicationServices REQUIRED)
+    target_link_libraries(GameLogic PRIVATE ${APPLICATION_SERVICES_FRAMEWORK})
+endif()
+
 add_executable(StealthActionGame main.cpp)
 target_link_libraries(StealthActionGame PRIVATE GameLogic)
 
