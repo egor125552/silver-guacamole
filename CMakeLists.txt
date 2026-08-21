@@ -10,8 +10,10 @@ find_package(PkgConfig REQUIRED)
 pkg_check_modules(OPENAL REQUIRED IMPORTED_TARGET openal)
 pkg_check_modules(VORBISFILE REQUIRED IMPORTED_TARGET vorbisfile)
 
+include(cmake/PrepareSoundEngine.cmake)
+
 set(GAME_LOGIC_SOURCES
-    SoundEngine.cpp
+    ${GENERATED_SOUNDENGINE}
     SoundEngine.h
     Character.cpp
     Character.h
