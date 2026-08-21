@@ -4,7 +4,6 @@
 #include <vector>
 #include <memory>
 
-// Forward declaration
 class Enemy;
 
 class Player : public Character {
@@ -14,6 +13,8 @@ public:
     static constexpr float WALK_STEP_INTERVAL = 0.55f;
     static constexpr float RUN_STEP_INTERVAL = 0.35f;
     static constexpr float CROUCH_STEP_INTERVAL = 0.8f;
+    static constexpr float DODGE_DURATION = 0.45f;
+    static constexpr float DODGE_COOLDOWN = 1.25f;
 
     float runSpeed = 18.0f;
     bool isRunning = false;
@@ -28,6 +29,7 @@ private:
     sf::Clock healthRegenDelayClock;
     sf::Clock timeSinceLastCombatEvent;
     sf::Clock dodgeTimer;
+    sf::Clock dodgeCooldownClock;
 
 public:
     explicit Player(const GameSettings& settings);
@@ -37,6 +39,6 @@ public:
     void reset(const GameSettings& settings);
     bool takeDamage(int damage, SoundEngine& engine, Character* attacker = nullptr, bool guaranteedStun = false) override;
     void toggleCrouch();
-    void dodge();
+    bool dodge();
     bool isRegenOnCooldown(const GameSettings& settings) const;
 };
