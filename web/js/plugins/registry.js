@@ -2,6 +2,7 @@
 // Поставьте enabled:false или удалите строку: этот плагин перестанет существовать для игры.
 export const plugins=[
   {module:"../plugins/audio/audio-core.js"},
+  {module:"../plugins/audio/spatial-router.js"},
   {module:"../plugins/audio/original-sounds.js"},
   {module:"../plugins/audio/synth-cues.js"},
   {module:"../plugins/audio/loops.js"},
