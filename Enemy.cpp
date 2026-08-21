@@ -6,25 +6,45 @@
 #include <sstream>
 #include <algorithm>
 
+namespace {
+float planarDistance(const sf::Vector3f& a, const sf::Vector3f& b) {
+    return std::hypot(a.x - b.x, a.z - b.z);
+}
+
+bool collidesAt(const sf::Vector3f& pos, const std::vector<sf::FloatRect>& walls) {
+    sf::FloatRect bounds({pos.x - 0.4f, pos.z - 0.4f}, {0.8f, 0.8f});
+    return std::any_of(walls.begin(), walls.end(), [&](const auto& wall) {
+        return wall.findIntersection(bounds).has_value();
+    });
+}
+}
+
 Enemy::Enemy(sf::Vector3f startPos, NPCType npcType, const GameSettings& settings) : type(npcType) {
     position = startPos;
     respawn(startPos, settings);
 }
 
 void Enemy::move(sf::Vector3f direction, float speed, float deltaTime, const std::vector<sf::FloatRect>& walls) {
-    sf::Vector3f newPos = position + direction * speed * deltaTime;
-    sf::FloatRect npcBounds({newPos.x - 0.4f, newPos.z - 0.4f}, {0.8f, 0.8f});
+    const float length = std::hypot(direction.x, direction.z);
+    if (length <= 0.0001f) return;
+    direction.x /= length;
+    direction.z /= length;
 
-    bool collision = false;
-    for (const auto& wall : walls) {
-        if (wall.findIntersection(npcBounds)) {
-            collision = true;
-            break;
-        }
+    const sf::Vector3f desired = position + direction * speed * deltaTime;
+    if (!collidesAt(desired, walls)) {
+        position = desired;
+        return;
     }
 
-    if (!collision) {
-        position = newPos;
+    const sf::Vector3f slideX{desired.x, position.y, position.z};
+    if (!collidesAt(slideX, walls)) {
+        position = slideX;
+        return;
+    }
+
+    const sf::Vector3f slideZ{position.x, position.y, desired.z};
+    if (!collidesAt(slideZ, walls)) {
+        position = slideZ;
     }
 }
 
@@ -43,15 +63,30 @@ void Enemy::update(float deltaTime, Player& player, SoundEngine& engine, const G
         case AIState::ALERT:
             updateAlert(deltaTime, engine, walls);
             break;
-        case AIState::SEARCHING:
-            // В состоянии поиска враг просто ждет некоторое время,
-            // оглядываясь по сторонам (пока что просто ждет).
-            // Если таймер истек, он возвращается к патрулированию.
-            if (stateTimer.getElapsedTime().asSeconds() > 15.0f) { // 15 секунд поиска
+        case AIState::SEARCHING: {
+            if (stateTimer.getElapsedTime().asSeconds() > 15.0f) {
                 state = AIState::PATROLLING;
                 setNewRandomTarget(settings);
+                decisionClock.restart();
+                break;
+            }
+
+            sf::Vector3f direction = targetPosition - position;
+            float distanceToTarget = std::hypot(direction.x, direction.z);
+            if (distanceToTarget > 1.5f) {
+                move(direction, walkSpeed * 1.25f, deltaTime, walls);
+                if (stepClock.getElapsedTime().asSeconds() > WALK_STEP_INTERVAL) {
+                    engine.playSound("footstep", position, 75.f);
+                    stepClock.restart();
+                }
+            } else if (decisionClock.getElapsedTime().asSeconds() > 2.0f) {
+                targetPosition.x = position.x + getFloat(-8.0f, 8.0f);
+                targetPosition.y = 0.f;
+                targetPosition.z = position.z + getFloat(-8.0f, 8.0f);
+                decisionClock.restart();
             }
             break;
+        }
         case AIState::COMBAT:
             updateCombat(deltaTime, player, engine, settings, walls, allEnemies);
             break;
@@ -70,7 +105,6 @@ void Enemy::updatePatrolling(float deltaTime, SoundEngine& engine, const std::ve
         float distance = std::hypot(direction.x, direction.z);
         if (distance > 1.0f) {
             isMoving = true;
-            direction /= distance;
             move(direction, walkSpeed, deltaTime, walls);
             if (stepClock.getElapsedTime().asSeconds() > WALK_STEP_INTERVAL) {
                 engine.playSound("footstep", position, 70.f);
@@ -92,17 +126,15 @@ void Enemy::updateAlert(float deltaTime, SoundEngine& engine, const std::vector<
     sf::Vector3f direction = targetPosition - position;
     float distanceToTarget = std::hypot(direction.x, direction.z);
     if (distanceToTarget > 2.0f) {
-        direction /= distanceToTarget;
         move(direction, runSpeed, deltaTime, walls);
         if (stepClock.getElapsedTime().asSeconds() > RUN_STEP_INTERVAL) {
             engine.playSound("footstep", position, 90.f);
             stepClock.restart();
         }
-    } else {
-        if (stateTimer.getElapsedTime().asSeconds() > 10.0f) {
-            state = AIState::PATROLLING;
-            setNewRandomTarget(engine.getSettings());
-        }
+    } else if (stateTimer.getElapsedTime().asSeconds() > 4.0f) {
+        state = AIState::SEARCHING;
+        stateTimer.restart();
+        decisionClock.restart();
     }
 }
 
@@ -117,9 +149,7 @@ bool Enemy::hasLineOfSight(const sf::Vector3f& target, const std::vector<sf::Flo
         sf::Vector2f intersection_point = rayIntersectsRect(start, dir, wall);
         if (intersection_point.x != -1) {
             float intersection_dist = std::hypot(intersection_point.x - start.x, intersection_point.y - start.y);
-            if (intersection_dist < distance) {
-                return false;
-            }
+            if (intersection_dist < distance) return false;
         }
     }
     return true;
@@ -131,50 +161,79 @@ void Enemy::updateCombat(float deltaTime, Player& player, SoundEngine& engine, c
         return;
     }
 
-    targetPosition = player.position;
-    float distanceToPlayer = std::hypot(player.position.x - position.x, player.position.z - position.z);
+    const float distanceToPlayer = planarDistance(position, player.position);
 
     if (!hasLineOfSight(player.position, walls)) {
-        // Логика погони, если игрок скрылся из виду
-        sf::Vector3f direction = player.position - position;
-        move(direction, runSpeed, deltaTime, walls);
+        targetPosition = player.position;
+        state = AIState::SEARCHING;
+        stateTimer.restart();
+        decisionClock.restart();
         return;
     }
 
-    // Логика атаки в зависимости от поведения
+    targetPosition = player.position;
+
     if (behavior == AIBehavior::AGGRESSOR) {
         const float meleeAttackRange = 1.8f;
         if (distanceToPlayer > meleeAttackRange) {
-             sf::Vector3f direction = player.position - position;
-             move(direction, runSpeed, deltaTime, walls);
-             if (stepClock.getElapsedTime().asSeconds() > RUN_STEP_INTERVAL) {
+            move(player.position - position, runSpeed, deltaTime, walls);
+            if (stepClock.getElapsedTime().asSeconds() > RUN_STEP_INTERVAL) {
                 engine.playSound("footstep", position, 90.f);
                 stepClock.restart();
             }
-        } else if (lastAttackClock.getElapsedTime().asSeconds() > 1.2f) {
+        } else if (settings.meleeNpcCanAttack && lastAttackClock.getElapsedTime().asSeconds() > 1.2f) {
             lastAttackClock.restart();
-            engine.playSound("punch", position);
-            if (getInt(1, 100) <= 90) player.takeDamage(settings.fistDamage, engine, this);
+            int damage = settings.fistDamage;
+            std::string sound = "punch";
+            if (weapon == WeaponType::KNIFE || weapon == WeaponType::SHANK) {
+                damage = weapon == WeaponType::KNIFE ? settings.knifeDamage : settings.shankDamage;
+                sound = "Knife_Swish";
+            } else if (weapon == WeaponType::BATON || weapon == WeaponType::CROWBAR || weapon == WeaponType::BAT) {
+                damage = weapon == WeaponType::BATON ? settings.batonDamage : (weapon == WeaponType::CROWBAR ? settings.crowbarDamage : settings.batDamage);
+                sound = weapon == WeaponType::BAT ? "Bat_Swish" : "Blunt_Metal_Swish";
+            } else if (weapon == WeaponType::MACHETE) {
+                damage = settings.macheteDamage;
+                sound = "Machete_Swish";
+            }
+            engine.playSound(sound, position);
+            if (getInt(1, 100) <= 85) player.takeDamage(damage, engine, this);
         }
-    } else if (behavior == AIBehavior::SUPPORT) {
-        // Логика для стрелков и электрошокера
-        if (weapon == WeaponType::TASER && distanceToPlayer < settings.taserRange && lastAttackClock.getElapsedTime().asSeconds() > settings.taserCooldown) {
+        return;
+    }
+
+    if (weapon == WeaponType::TASER) {
+        if (distanceToPlayer <= settings.taserRange && lastAttackClock.getElapsedTime().asSeconds() > settings.taserCooldown) {
             lastAttackClock.restart();
-            engine.playSound("sniper", position); // Placeholder
-            player.takeDamage(0, engine, this, true); // Оглушение
-        } else if (weapon == WeaponType::PISTOL && distanceToPlayer < 30.0f && lastAttackClock.getElapsedTime().asSeconds() > 1.5f) {
+            engine.playSound("Taser_Fire", position);
+            player.takeDamage(0, engine, this, true);
+        }
+    } else if (weapon == WeaponType::PISTOL) {
+        if (distanceToPlayer <= 30.0f && lastAttackClock.getElapsedTime().asSeconds() > 1.5f) {
             lastAttackClock.restart();
             engine.playSound("pistol", position);
             if (getInt(1, 100) <= 60) player.takeDamage(settings.pistolDamage, engine, this);
+        }
+    } else if (weapon == WeaponType::AUTOMATIC) {
+        if (distanceToPlayer <= 25.0f && lastAttackClock.getElapsedTime().asSeconds() > 0.35f) {
+            lastAttackClock.restart();
+            engine.playSound("automatic", position);
+            if (getInt(1, 100) <= 45) player.takeDamage(settings.automaticDamage, engine, this);
+        }
+    } else if (weapon == WeaponType::SNIPER) {
+        if (distanceToPlayer <= 65.0f && lastAttackClock.getElapsedTime().asSeconds() > 2.0f) {
+            lastAttackClock.restart();
+            engine.playSound("sniper", position);
+            if (getInt(1, 100) <= 70) player.takeDamage(settings.sniperDamage, engine, this);
         }
     }
 }
 
 void Enemy::investigate(sf::Vector3f pos) {
-    if (state == AIState::PATROLLING) {
+    if (state == AIState::PATROLLING || state == AIState::SEARCHING) {
         state = AIState::ALERT;
         targetPosition = pos;
         stateTimer.restart();
+        decisionClock.restart();
     }
 }
 
@@ -183,36 +242,103 @@ bool Enemy::canRespawn(float respawnTime) const {
 }
 
 void Enemy::onDeath(SoundEngine& engine) {
+    if (deathNotified) return;
+    deathNotified = true;
     deathClock.restart();
-    // TODO: engine.onEnemyDied(this);
+    engine.onEnemyDied(this);
+}
+
+void Enemy::configureLoadout(const GameSettings& settings) {
+    behavior = AIBehavior::AGGRESSOR;
+    weapon = WeaponType::FIST;
+
+    switch (type) {
+        case NPCType::REGULAR: {
+            maxHealth = settings.regularHealth;
+            const int roll = getInt(1, 100);
+            if (roll <= settings.prisonerPistolChance) {
+                weapon = WeaponType::PISTOL;
+                behavior = AIBehavior::SUPPORT;
+            } else {
+                const int meleeRoll = getInt(1, 5);
+                if (meleeRoll == 1) weapon = WeaponType::KNIFE;
+                else if (meleeRoll == 2) weapon = WeaponType::SHANK;
+                else if (meleeRoll == 3) weapon = WeaponType::BAT;
+                else if (meleeRoll == 4) weapon = WeaponType::CROWBAR;
+            }
+            break;
+        }
+        case NPCType::SHOOTER:
+            maxHealth = settings.shooterHealth;
+            weapon = WeaponType::PISTOL;
+            behavior = AIBehavior::SUPPORT;
+            break;
+        case NPCType::GUARD: {
+            maxHealth = settings.shooterHealth;
+            const int roll = getInt(1, 100);
+            if (roll <= settings.guardPistolChance) {
+                weapon = WeaponType::PISTOL;
+                behavior = AIBehavior::SUPPORT;
+            } else if (roll <= settings.guardPistolChance + settings.guardAutomaticChance) {
+                weapon = WeaponType::AUTOMATIC;
+                behavior = AIBehavior::SUPPORT;
+            } else if (roll <= settings.guardPistolChance + settings.guardAutomaticChance + settings.guardTaserChance) {
+                weapon = WeaponType::TASER;
+                behavior = AIBehavior::SUPPORT;
+            } else {
+                weapon = WeaponType::BATON;
+                behavior = AIBehavior::AGGRESSOR;
+            }
+            break;
+        }
+        case NPCType::BOSS:
+            maxHealth = settings.bossHealth;
+            weapon = WeaponType::AUTOMATIC;
+            behavior = AIBehavior::SUPPORT;
+            break;
+    }
 }
 
 void Enemy::respawn(sf::Vector3f newPosition, const GameSettings& settings) {
-    isAlive = true; state = AIState::PATROLLING; detectionLevel = 0.0f; hasReactedToDeath = false;
+    isAlive = true;
+    state = AIState::PATROLLING;
+    detectionLevel = 0.0f;
+    hasReactedToDeath = false;
     isStunned = false;
-    walkSpeed = settings.npcWalkSpeed; runSpeed = settings.npcRunSpeed; isWaiting = false;
-    health = maxHealth; position = newPosition;
+    deathNotified = false;
+    walkSpeed = settings.npcWalkSpeed;
+    runSpeed = settings.npcRunSpeed;
+    isWaiting = false;
+    configureLoadout(settings);
+    health = maxHealth;
+    position = newPosition;
     setNewRandomTarget(settings);
     decisionClock.restart();
-    // ... остальная логика респавна оружия ...
+    stateTimer.restart();
+    lastAttackClock.restart();
 }
 
 bool Enemy::takeDamage(int damage, SoundEngine& engine, Character* attacker, bool guaranteedStun) {
     if (!isAlive) return false;
 
     engine.playSound("hit", position);
-    bool result = Character::takeDamage(damage, engine, attacker, guaranteedStun);
+    const bool wasAlive = isAlive;
+    const bool result = Character::takeDamage(damage, engine, attacker, guaranteedStun);
 
     if (result && isAlive) {
         if (guaranteedStun) {
             stunFor(5.f);
             engine.playSound("Stun", position);
-            logError("DEBUG_STUN"); // Log message for the test script
+            logError("DEBUG_STUN");
+        } else if (getInt(1, 100) <= engine.getSettings().npcStunChanceOnDamage) {
+            stunFor(engine.getSettings().npcStunDuration);
         }
-        if (state != AIState::COMBAT) {
-            // TODO: engine.onEnemySpottedPlayer(this, true);
+        if (state != AIState::COMBAT && attacker != nullptr) {
+            engine.onEnemySpottedPlayer(this, true);
         }
     }
+
+    if (wasAlive && !isAlive) onDeath(engine);
     return result;
 }
 
