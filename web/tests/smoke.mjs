@@ -15,8 +15,10 @@ class Game{
 const g=new Game();for(const name of names){const m=await import(new URL(name,base));await m.default.install(g);}g.emit('reset');
 const ok=(c,m)=>{if(!c)throw new Error(m)};
 ok(g.state.player.health===250,'player reset');ok(g.state.enemies.length===20,'enemy count');ok(g.state.walls.length===25,'wall count');
-const z=g.state.player.position.z;g.input.held.add('ArrowUp');g.emit('update',{dt:.1,time:.1});g.input.held.clear();ok(g.state.player.position.z<z,'movement');
-const e=g.state.enemies[0];e.alive=true;e.role="investigator";e.position={x:8,z:0};e.state='patrolling';e.detection=0;g.state.player.position={x:0,z:0};g.state.walls=[];g.emit('playerNoise',{position:{x:0,z:0},radius:10});ok(e.state==='alert','open hearing');
+const z=g.state.player.position.z;g.sounds=[];g.input.held.add('ArrowUp');g.time=.1;g.emit('update',{dt:.1,time:.1});g.time=.7;g.emit('update',{dt:.1,time:.7});g.input.held.clear();ok(g.state.player.position.z<z,'movement');
+const ownStep=g.sounds.find(([name,opt])=>name==='footstep'&&opt.spatialMode==='hrtf'&&opt.position?.y===0);ok(ownStep&&ownStep[1].relative===false,'player footstep is floor-level HRTF');
+const e=g.state.enemies[0];g.sounds=[];e.nextStep=0;g.time=1;g.emit('enemyMoved',{enemy:e,running:false,volume:70,moved:true});const npcStep=g.sounds.find(([name,opt])=>name==='footstep'&&opt.spatialMode==='hrtf'&&opt.position?.y===0);ok(npcStep&&npcStep[1].relative===false,'enemy footstep is floor-level HRTF');
+e.alive=true;e.role="investigator";e.position={x:8,z:0};e.state='patrolling';e.detection=0;g.state.player.position={x:0,z:0};g.state.walls=[];g.emit('playerNoise',{position:{x:0,z:0},radius:10});ok(e.state==='alert','open hearing');
 e.state='patrolling';e.detection=0;g.state.walls=[{x:3,z:-2,w:2,h:4}];g.emit('playerNoise',{position:{x:0,z:0},radius:10});ok(e.state==='patrolling','wall hearing');
 g.state.walls=[];e.position={x:1,z:0};e.state='patrolling';e.alive=true;e.health=e.maxHealth=120;g.state.player.position={x:0,z:0};g.state.player.weapon=Weapon.FIST;g.state.player.lastAttackTime=-10;g.time=10;g.emit('playerAttack');ok(e.health===85,'fist damage');
 e.alive=true;e.health=120;e.state='patrolling';e.detection=0;e.position={x:1,z:0};g.state.player.lastAttackTime=0;g.time=20;g.emit('playerTakedown');ok(!e.alive,'takedown');
