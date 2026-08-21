@@ -5,7 +5,6 @@
 #include <vector>
 #include <memory>
 
-// Forward declarations
 class Player;
 class SoundEngine;
 
@@ -31,19 +30,19 @@ private:
     sf::Clock deathClock;
     bool isMoving = false;
     bool isWaiting = false;
+    bool deathNotified = false;
 
     void setNewRandomTarget(const GameSettings& settings);
     void move(sf::Vector3f direction, float speed, float deltaTime, const std::vector<sf::FloatRect>& walls);
+    void configureLoadout(const GameSettings& settings);
 
 public:
-    // Public for testing purposes
     void updatePatrolling(float deltaTime, SoundEngine& engine, const std::vector<sf::FloatRect>& walls);
     void updateAlert(float deltaTime, SoundEngine& engine, const std::vector<sf::FloatRect>& walls);
     void updateCombat(float deltaTime, Player& player, SoundEngine& engine, const GameSettings& settings, const std::vector<sf::FloatRect>& walls, const std::vector<std::unique_ptr<Enemy>>& allEnemies);
 
     Enemy(sf::Vector3f startPos, NPCType npcType, const GameSettings& settings);
 
-    // The main update function, delegates to state-specific updates
     void update(float deltaTime, Player& player, SoundEngine& engine, const GameSettings& settings, GameMode gameMode, const std::vector<sf::FloatRect>& walls, const std::vector<std::unique_ptr<Enemy>>& allEnemies);
 
     bool hasLineOfSight(const sf::Vector3f& target, const std::vector<sf::FloatRect>& walls);
