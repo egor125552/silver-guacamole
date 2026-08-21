@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - fix/gameplay-hardening
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
@@ -12,11 +15,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install dependencies
-        run: brew install cmake sfml openal-soft libogg libvorbis fmt googletest
+        run: brew install cmake sfml openal-soft libogg libvorbis fmt pkgconf
       - name: Configure
-        run: cmake -S . -B build -DBUILD_TESTING=ON
+        run: cmake -S . -B build -DBUILD_TESTING=ON -DCMAKE_BUILD_TYPE=Release
       - name: Build
-        run: cmake --build build --config Release -j 2
+        run: cmake --build build -j 2
       - name: Test
         run: ctest --test-dir build --output-on-failure
       - name: Package app
